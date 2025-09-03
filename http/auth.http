@@ -1,0 +1,46 @@
+### SimpleShop API - Authentication Tests
+### Base URL: http://localhost:3000
+
+### Admin Login
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+### Admin Login with Email
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin@simpleshop.com",
+  "password": "admin123"
+}
+
+### Invalid Login - Wrong Password
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "wrongpassword"
+}
+
+### Invalid Login - Non-existent User
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "nonexistent",
+  "password": "admin123"
+}
+
+### Invalid Login - Missing Fields
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin"
+}

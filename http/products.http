@@ -1,0 +1,20 @@
+### SimpleShop API - Product Tests
+### Base URL: http://localhost:3000
+
+### Get All Products
+GET http://localhost:3000/api/products
+
+### Get All Products with Pagination
+GET http://localhost:3000/api/products?page=1&limit=2
+
+### Get All Products with Search
+GET http://localhost:3000/api/products?search=Sample
+
+### Get Product by ID
+GET http://localhost:3000/api/products/1
+
+### Get Product by ID (Non-existent)
+GET http://localhost:3000/api/products/999
+
+### Get Product by ID (Invalid ID)
+GET http://localhost:3000/api/products/invalid

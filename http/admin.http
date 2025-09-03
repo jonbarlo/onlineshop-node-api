@@ -1,0 +1,122 @@
+### SimpleShop API - Admin Tests
+### Base URL: http://localhost:3000
+### Note: Replace {{token}} with actual JWT token from login response
+
+### First, get a token by logging in
+# @name login
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+### Set token variable (copy from login response)
+@token = {{login.response.body.data.token}}
+
+### Get All Orders (Admin)
+GET http://localhost:3000/api/admin/orders
+Authorization: Bearer {{token}}
+
+### Get Orders with Pagination
+GET http://localhost:3000/api/admin/orders?page=1&limit=5
+Authorization: Bearer {{token}}
+
+### Get Orders by Status
+GET http://localhost:3000/api/admin/orders?status=new
+Authorization: Bearer {{token}}
+
+### Get Orders with Search
+GET http://localhost:3000/api/admin/orders?search=John
+Authorization: Bearer {{token}}
+
+### Get Order by ID
+GET http://localhost:3000/api/admin/orders/1
+Authorization: Bearer {{token}}
+
+### Get Order by ID (Non-existent)
+GET http://localhost:3000/api/admin/orders/999
+Authorization: Bearer {{token}}
+
+### Update Order Status to Paid
+PUT http://localhost:3000/api/admin/orders/1/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "paid"
+}
+
+### Update Order Status to Ready for Delivery
+PUT http://localhost:3000/api/admin/orders/1/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "ready_for_delivery"
+}
+
+### Update Order Status with Invalid Status
+PUT http://localhost:3000/api/admin/orders/1/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "invalid_status"
+}
+
+### Get Dashboard Statistics
+GET http://localhost:3000/api/admin/dashboard
+Authorization: Bearer {{token}}
+
+### Get All Products (Admin View)
+GET http://localhost:3000/api/admin/products
+Authorization: Bearer {{token}}
+
+### Get Products with Pagination
+GET http://localhost:3000/api/admin/products?page=1&limit=2
+Authorization: Bearer {{token}}
+
+### Get Products with Search
+GET http://localhost:3000/api/admin/products?search=Sample
+Authorization: Bearer {{token}}
+
+### Create New Product
+POST http://localhost:3000/api/admin/products
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "New Test Product",
+  "description": "This is a test product created via API",
+  "price": 39.99,
+  "imageUrl": "https://via.placeholder.com/300x300?text=New+Product"
+}
+
+### Update Product
+PUT http://localhost:3000/api/admin/products/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Updated Product Name",
+  "description": "Updated product description",
+  "price": 49.99,
+  "imageUrl": "https://via.placeholder.com/300x300?text=Updated+Product"
+}
+
+### Delete Product (Soft Delete)
+DELETE http://localhost:3000/api/admin/products/1
+Authorization: Bearer {{token}}
+
+### Delete Non-existent Product
+DELETE http://localhost:3000/api/admin/products/999
+Authorization: Bearer {{token}}
+
+### Test without Authorization (Should fail)
+GET http://localhost:3000/api/admin/orders
+
+### Test with Invalid Token (Should fail)
+GET http://localhost:3000/api/admin/orders
+Authorization: Bearer invalid_token_here

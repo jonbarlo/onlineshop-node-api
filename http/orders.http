@@ -1,0 +1,106 @@
+### SimpleShop API - Order Tests
+### Base URL: http://localhost:3000
+
+### Create New Order
+POST http://localhost:3000/api/orders
+Content-Type: application/json
+
+{
+  "customerName": "John Doe",
+  "customerEmail": "john.doe@example.com",
+  "customerPhone": "+1234567890",
+  "deliveryAddress": "123 Main Street, New York, NY 10001",
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2
+    },
+    {
+      "productId": 2,
+      "quantity": 1
+    }
+  ]
+}
+
+### Create Order with Single Item
+POST http://localhost:3000/api/orders
+Content-Type: application/json
+
+{
+  "customerName": "Jane Smith",
+  "customerEmail": "jane.smith@example.com",
+  "customerPhone": "+1987654321",
+  "deliveryAddress": "456 Oak Avenue, Los Angeles, CA 90210",
+  "items": [
+    {
+      "productId": 3,
+      "quantity": 3
+    }
+  ]
+}
+
+### Create Order with Invalid Product ID
+POST http://localhost:3000/api/orders
+Content-Type: application/json
+
+{
+  "customerName": "Bob Johnson",
+  "customerEmail": "bob.johnson@example.com",
+  "customerPhone": "+1122334455",
+  "deliveryAddress": "789 Pine Road, Chicago, IL 60601",
+  "items": [
+    {
+      "productId": 999,
+      "quantity": 1
+    }
+  ]
+}
+
+### Create Order with Missing Required Fields
+POST http://localhost:3000/api/orders
+Content-Type: application/json
+
+{
+  "customerName": "Alice Brown",
+  "customerEmail": "alice.brown@example.com",
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 1
+    }
+  ]
+}
+
+### Create Order with Invalid Email Format
+POST http://localhost:3000/api/orders
+Content-Type: application/json
+
+{
+  "customerName": "Charlie Wilson",
+  "customerEmail": "invalid-email",
+  "customerPhone": "+1555666777",
+  "deliveryAddress": "321 Elm Street, Miami, FL 33101",
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 1
+    }
+  ]
+}
+
+### Create Order with Zero Quantity
+POST http://localhost:3000/api/orders
+Content-Type: application/json
+
+{
+  "customerName": "David Lee",
+  "customerEmail": "david.lee@example.com",
+  "customerPhone": "+1444555666",
+  "deliveryAddress": "654 Maple Drive, Seattle, WA 98101",
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 0
+    }
+  ]
+}

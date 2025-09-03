@@ -1,0 +1,182 @@
+### SimpleShop API - Complete Test Suite
+### Base URL: http://localhost:3000
+### This file contains all API endpoints for comprehensive testing
+
+### ===========================================
+### 1. HEALTH CHECK
+### ===========================================
+
+### Health Check
+GET http://localhost:3000/health
+
+### ===========================================
+### 2. AUTHENTICATION
+### ===========================================
+
+### Admin Login
+# @name login
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+### Set token variable
+@token = {{login.response.body.data.token}}
+
+### ===========================================
+### 3. PUBLIC PRODUCT ENDPOINTS
+### ===========================================
+
+### Get All Products
+GET http://localhost:3000/api/products
+
+### Get Products with Pagination
+GET http://localhost:3000/api/products?page=1&limit=2
+
+### Get Products with Search
+GET http://localhost:3000/api/products?search=Sample
+
+### Get Product by ID
+GET http://localhost:3000/api/products/1
+
+### ===========================================
+### 4. ORDER CREATION
+### ===========================================
+
+### Create New Order
+# @name createOrder
+POST http://localhost:3000/api/orders
+Content-Type: application/json
+
+{
+  "customerName": "Test Customer",
+  "customerEmail": "test@example.com",
+  "customerPhone": "+1234567890",
+  "deliveryAddress": "123 Test Street, Test City, TC 12345",
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2
+    },
+    {
+      "productId": 2,
+      "quantity": 1
+    }
+  ]
+}
+
+### Set order ID for admin tests
+@orderId = {{createOrder.response.body.data.id}}
+
+### ===========================================
+### 5. ADMIN ENDPOINTS (Protected)
+### ===========================================
+
+### Get All Orders (Admin)
+GET http://localhost:3000/api/admin/orders
+Authorization: Bearer {{token}}
+
+### Get Orders with Filters
+GET http://localhost:3000/api/admin/orders?status=new&page=1&limit=5
+Authorization: Bearer {{token}}
+
+### Get Specific Order
+GET http://localhost:3000/api/admin/orders/{{orderId}}
+Authorization: Bearer {{token}}
+
+### Update Order Status
+PUT http://localhost:3000/api/admin/orders/{{orderId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "paid"
+}
+
+### Get Dashboard Statistics
+GET http://localhost:3000/api/admin/dashboard
+Authorization: Bearer {{token}}
+
+### Get All Products (Admin)
+GET http://localhost:3000/api/admin/products
+Authorization: Bearer {{token}}
+
+### Create New Product
+# @name createProduct
+POST http://localhost:3000/api/admin/products
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "API Test Product",
+  "description": "Product created via API test",
+  "price": 25.99,
+  "imageUrl": "https://via.placeholder.com/300x300?text=API+Test"
+}
+
+### Set product ID
+@productId = {{createProduct.response.body.data.id}}
+
+### Update Product
+PUT http://localhost:3000/api/admin/products/{{productId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Updated API Test Product",
+  "description": "Updated description",
+  "price": 29.99
+}
+
+### Delete Product
+DELETE http://localhost:3000/api/admin/products/{{productId}}
+Authorization: Bearer {{token}}
+
+### ===========================================
+### 6. ERROR TESTING
+### ===========================================
+
+### Invalid Login
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "wrongpassword"
+}
+
+### Access Protected Endpoint Without Token
+GET http://localhost:3000/api/admin/orders
+
+### Access Protected Endpoint With Invalid Token
+GET http://localhost:3000/api/admin/orders
+Authorization: Bearer invalid_token
+
+### Get Non-existent Product
+GET http://localhost:3000/api/products/999
+
+### Get Non-existent Order
+GET http://localhost:3000/api/admin/orders/999
+Authorization: Bearer {{token}}
+
+### Create Order with Invalid Data
+POST http://localhost:3000/api/orders
+Content-Type: application/json
+
+{
+  "customerName": "",
+  "customerEmail": "invalid-email",
+  "items": []
+}
+
+### Update Order with Invalid Status
+PUT http://localhost:3000/api/admin/orders/1/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "invalid_status"
+}

@@ -1,0 +1,10 @@
+### SimpleShop API - Health Check Tests
+### Base URL: http://localhost:3000
+
+### Health Check
+GET http://localhost:3000/health
+
+### Health Check with Headers
+GET http://localhost:3000/health
+Accept: application/json
+User-Agent: SimpleShop-API-Test/1.0
