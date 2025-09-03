@@ -1,5 +1,4 @@
 import { UserResponse } from './user';
-import { TokenResponse } from './jwt';
 
 // Authentication Request Types
 export interface LoginRequest {

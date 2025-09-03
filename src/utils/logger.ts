@@ -1,9 +1,8 @@
 import winston from 'winston';
-import path from 'path';
 import { config } from '@/config';
 
 // Create logs directory if it doesn't exist
-const logDir = path.dirname(config.logging.file);
+// const logDir = path.dirname(config.logging.file);
 
 // Define log format
 const logFormat = winston.format.combine(

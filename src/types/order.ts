@@ -1,9 +1,11 @@
-// Order Status Enum
-export enum OrderStatus {
-  NEW = 'new',
-  PAID = 'paid',
-  READY_FOR_DELIVERY = 'ready_for_delivery',
-}
+// Order Status Types
+export type OrderStatus = 'new' | 'paid' | 'ready_for_delivery';
+
+export const ORDER_STATUS = {
+  NEW: 'new' as const,
+  PAID: 'paid' as const,
+  READY_FOR_DELIVERY: 'ready_for_delivery' as const,
+} as const;
 
 // Order Item Types
 export interface OrderItem {

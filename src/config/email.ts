@@ -6,20 +6,20 @@ import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const emailConfig = {
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.EMAIL_PORT || '587'),
-  secure: process.env.EMAIL_SECURE === 'true',
+  host: process.env['EMAIL_HOST'] || 'smtp.gmail.com',
+  port: parseInt(process.env['EMAIL_PORT'] || '587'),
+  secure: process.env['EMAIL_SECURE'] === 'true',
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: process.env['EMAIL_USER'],
+    pass: process.env['EMAIL_PASS'],
   },
 };
 
 // Create email transporter
-const transporter = nodemailer.createTransporter(emailConfig);
+const transporter = nodemailer.createTransport(emailConfig);
 
 // Verify connection configuration
-transporter.verify((error, success) => {
+transporter.verify((error: any, _success: any) => {
   if (error) {
     console.error('Email configuration error:', error);
   } else {
@@ -30,6 +30,6 @@ transporter.verify((error, success) => {
 export default transporter;
 
 export const emailConfigs = {
-  from: process.env.EMAIL_FROM || 'noreply@simpleshop.com',
-  managerEmail: process.env.MANAGER_EMAIL || 'manager@simpleshop.com',
+  from: process.env['EMAIL_FROM'] || 'noreply@simpleshop.com',
+  managerEmail: process.env['MANAGER_EMAIL'] || 'manager@simpleshop.com',
 };

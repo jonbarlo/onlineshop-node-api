@@ -6,4 +6,4 @@ export * from './jwt';
 export * from './product';
 export * from './order';
 export * from './email';
-export * from './validation';
+export { ValidationError, ValidationResult, FieldValidation, ValidationSchema } from './validation';

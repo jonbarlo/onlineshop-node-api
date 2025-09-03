@@ -1,9 +1,5 @@
 // Application Constants
-export const ORDER_STATUS = {
-  NEW: 'new',
-  PAID: 'paid',
-  READY_FOR_DELIVERY: 'ready_for_delivery',
-} as const;
+// Order status constants (moved to types/order.ts)
 
 export const HTTP_STATUS = {
   OK: 200,

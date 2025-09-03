@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -19,26 +16,25 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  @@map("users")
   @@index([username])
   @@index([email])
+  @@map("users")
 }
 
 model Product {
-  id          Int      @id @default(autoincrement())
-  name        String   @db.VarChar(100)
-  description String   @db.Text
-  price       Decimal  @db.Decimal(10, 2)
-  imageUrl    String?  @map("image_url") @db.VarChar(255)
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id          Int         @id @default(autoincrement())
+  name        String      @db.VarChar(100)
+  description String      @db.Text
+  price       Decimal     @db.Decimal(10, 2)
+  imageUrl    String?     @map("image_url") @db.VarChar(255)
+  isActive    Boolean     @default(true) @map("is_active")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
 
-  // Relations
-  orderItems OrderItem[]
+  orderItems  OrderItem[]
 
-  @@map("products")
   @@index([isActive])
+  @@map("products")
 }
 
 model Order {
@@ -48,39 +44,29 @@ model Order {
   customerEmail   String      @map("customer_email") @db.VarChar(100)
   customerPhone   String      @map("customer_phone") @db.VarChar(20)
   deliveryAddress String      @map("delivery_address") @db.Text
-  status          OrderStatus @default(NEW)
+  status          String      @default("new") @db.VarChar(20)
   totalAmount     Decimal     @map("total_amount") @db.Decimal(10, 2)
   createdAt       DateTime    @default(now()) @map("created_at")
   updatedAt       DateTime    @updatedAt @map("updated_at")
+  items           OrderItem[]
 
-  // Relations
-  items OrderItem[]
-
-  @@map("orders")
   @@index([status])
   @@index([orderNumber])
   @@index([customerEmail])
+  @@map("orders")
 }
 
 model OrderItem {
-  id        Int     @id @default(autoincrement())
-  orderId   Int     @map("order_id")
-  productId Int     @map("product_id")
+  id        Int      @id @default(autoincrement())
+  orderId   Int      @map("order_id")
+  productId Int      @map("product_id")
   quantity  Int
-  unitPrice Decimal @map("unit_price") @db.Decimal(10, 2)
+  unitPrice Decimal  @map("unit_price") @db.Decimal(10, 2)
   createdAt DateTime @default(now()) @map("created_at")
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id])
 
-  // Relations
-  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id])
-
-  @@map("order_items")
   @@index([orderId])
   @@index([productId])
-}
-
-enum OrderStatus {
-  NEW
-  PAID
-  READY_FOR_DELIVERY
+  @@map("order_items")
 }

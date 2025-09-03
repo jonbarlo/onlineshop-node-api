@@ -12,15 +12,15 @@ async function main() {
   console.log('🌱 Starting database seed...');
 
   // Create admin user
-  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  const adminPassword = process.env['ADMIN_PASSWORD'] || 'admin123';
   const hashedPassword = await bcrypt.hash(adminPassword, 12);
 
   const adminUser = await prisma.user.upsert({
     where: { username: 'admin' },
     update: {},
     create: {
-      username: process.env.ADMIN_USERNAME || 'admin',
-      email: process.env.ADMIN_EMAIL || 'admin@simpleshop.com',
+      username: process.env['ADMIN_USERNAME'] || 'admin',
+      email: process.env['ADMIN_EMAIL'] || 'admin@simpleshop.com',
       passwordHash: hashedPassword,
       isActive: true,
     },
@@ -51,12 +51,19 @@ async function main() {
   ];
 
   for (const product of sampleProducts) {
-    const createdProduct = await prisma.product.upsert({
+    // Check if product already exists
+    const existingProduct = await prisma.product.findFirst({
       where: { name: product.name },
-      update: {},
-      create: product,
     });
-    console.log('✅ Product created:', { id: createdProduct.id, name: createdProduct.name });
+
+    if (!existingProduct) {
+      const createdProduct = await prisma.product.create({
+        data: product,
+      });
+      console.log('✅ Product created:', { id: createdProduct.id, name: createdProduct.name });
+    } else {
+      console.log('⏭️ Product already exists:', { id: existingProduct.id, name: existingProduct.name });
+    }
   }
 
   console.log('🎉 Database seed completed successfully!');

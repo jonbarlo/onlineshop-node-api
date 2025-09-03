@@ -7,7 +7,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 // Create Prisma client instance
 const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
+  log: process.env['NODE_ENV'] === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
   errorFormat: 'pretty',
 });
 
@@ -26,4 +26,5 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
+export { prisma };
 export default prisma;
