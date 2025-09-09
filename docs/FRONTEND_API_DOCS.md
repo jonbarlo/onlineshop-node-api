@@ -311,35 +311,36 @@ Authorization: Bearer <token>
 ### 4. Get All Products (Admin View)
 **Endpoint:** `GET /api/admin/products`
 
+**Authentication:** Required (Admin JWT token)
+
 **Query Parameters:**
 - `page` (optional): Page number (default: 1)
 - `limit` (optional): Items per page (default: 10)
-- `search` (optional): Search term
+
+**Note:** Admin view includes both active and inactive products
 
 **Response:**
 ```json
 {
   "success": true,
-  "message": "Products retrieved successfully",
-  "data": {
-    "products": [
-      {
-        "id": 1,
-        "name": "Sample Product 1",
-        "description": "This is a sample product description",
-        "price": 29.99,
-        "imageUrl": "https://via.placeholder.com/300x300?text=Product+1",
-        "isActive": true,
-        "createdAt": "2024-01-01T00:00:00.000Z",
-        "updatedAt": "2024-01-01T00:00:00.000Z"
-      }
-    ],
-    "pagination": {
-      "currentPage": 1,
-      "totalPages": 5,
-      "totalItems": 50,
-      "itemsPerPage": 10
+  "message": "Operation successful",
+  "data": [
+    {
+      "id": 1,
+      "name": "Sample Product 1",
+      "description": "This is a sample product description",
+      "price": 29.99,
+      "imageUrl": "https://via.placeholder.com/300x300?text=Product+1",
+      "isActive": true,
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
     }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 50,
+    "totalPages": 5
   },
   "timestamp": "2024-01-01T00:00:00.000Z"
 }
@@ -347,6 +348,8 @@ Authorization: Bearer <token>
 
 ### 5. Create Product
 **Endpoint:** `POST /api/admin/products`
+
+**Authentication:** Required (Admin JWT token)
 
 **Request:**
 ```json
@@ -357,6 +360,14 @@ Authorization: Bearer <token>
   "imageUrl": "https://example.com/image.jpg"
 }
 ```
+
+**Required Fields:**
+- `name` (string): Product name
+- `description` (string): Product description  
+- `price` (number): Product price
+
+**Optional Fields:**
+- `imageUrl` (string): Product image URL
 
 **Response:**
 ```json
@@ -380,15 +391,28 @@ Authorization: Bearer <token>
 ### 6. Update Product
 **Endpoint:** `PUT /api/admin/products/:id`
 
-**Request:**
+**Authentication:** Required (Admin JWT token)
+
+**Parameters:**
+- `id` (number): Product ID
+
+**Request:** (All fields are optional - only include fields you want to update)
 ```json
 {
   "name": "Updated Product Name",
   "description": "Updated description",
   "price": 39.99,
-  "imageUrl": "https://example.com/new-image.jpg"
+  "imageUrl": "https://example.com/new-image.jpg",
+  "isActive": true
 }
 ```
+
+**Optional Fields:**
+- `name` (string): Product name
+- `description` (string): Product description
+- `price` (number): Product price
+- `imageUrl` (string): Product image URL
+- `isActive` (boolean): Product active status
 
 **Response:**
 ```json
@@ -412,6 +436,13 @@ Authorization: Bearer <token>
 ### 7. Delete Product
 **Endpoint:** `DELETE /api/admin/products/:id`
 
+**Authentication:** Required (Admin JWT token)
+
+**Parameters:**
+- `id` (number): Product ID
+
+**Note:** This performs a soft delete by setting `isActive: false`
+
 **Response:**
 ```json
 {
@@ -421,7 +452,137 @@ Authorization: Bearer <token>
 }
 ```
 
-### 8. Get Dashboard Statistics
+### 8. Upload Product Image
+**Endpoint:** `POST /api/upload/product-image`
+
+**Authentication:** Required (Admin JWT token)
+
+**Content-Type:** `multipart/form-data`
+
+**Request Body:**
+- `image` (file): Image file to upload
+
+**File Requirements:**
+- **Size Limit:** 5MB maximum
+- **Allowed Types:** JPEG, JPG, PNG, GIF, WebP
+- **Field Name:** `image`
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Image uploaded successfully",
+  "data": {
+    "filename": "a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg",
+    "originalName": "product-image.jpg",
+    "size": 245760,
+    "imageUrl": "https://api.shop.506software.com/uploads/products/a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg"
+  },
+  "timestamp": "2024-01-01T00:00:00.000Z"
+}
+```
+
+**Usage Example (JavaScript):**
+```javascript
+const formData = new FormData();
+formData.append('image', fileInput.files[0]);
+
+const response = await fetch('/api/upload/product-image', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`
+  },
+  body: formData
+});
+
+const result = await response.json();
+const imageUrl = result.data.imageUrl; // Use this URL in product creation/update
+```
+
+### 9. Delete Product Image
+**Endpoint:** `DELETE /api/upload/product-image/:filename`
+
+**Authentication:** Required (Admin JWT token)
+
+**Parameters:**
+- `filename` (string): The filename of the image to delete
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Image deleted successfully",
+  "timestamp": "2024-01-01T00:00:00.000Z"
+}
+```
+
+**Usage Example:**
+```javascript
+const filename = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg';
+const response = await fetch(`/api/upload/product-image/${filename}`, {
+  method: 'DELETE',
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+});
+```
+
+### 10. Complete Image Upload Workflow
+
+**Step 1: Upload Image**
+```javascript
+// Upload the image file
+const formData = new FormData();
+formData.append('image', selectedFile);
+
+const uploadResponse = await fetch('/api/upload/product-image', {
+  method: 'POST',
+  headers: { 'Authorization': `Bearer ${token}` },
+  body: formData
+});
+
+const uploadResult = await uploadResponse.json();
+const imageUrl = uploadResult.data.imageUrl;
+```
+
+**Step 2: Create/Update Product with Image**
+```javascript
+// Create new product with uploaded image
+const productData = {
+  name: "New Product",
+  description: "Product description",
+  price: 29.99,
+  imageUrl: imageUrl // Use the URL from upload response
+};
+
+const productResponse = await fetch('/api/admin/products', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify(productData)
+});
+```
+
+**Step 3: Update Existing Product Image**
+```javascript
+// Update existing product with new image
+const updateData = {
+  imageUrl: imageUrl // Replace with new image URL
+};
+
+const updateResponse = await fetch(`/api/admin/products/${productId}`, {
+  method: 'PUT',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify(updateData)
+});
+```
+
+### 11. Get Dashboard Statistics
 **Endpoint:** `GET /api/admin/dashboard`
 
 **Response:**

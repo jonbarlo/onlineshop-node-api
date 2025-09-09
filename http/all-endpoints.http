@@ -4,8 +4,8 @@
 //baseUrl = http://localhost:3000
 //baseUrl = https://api.shop.506software.com
 //@baseUrl = {{baseUrl}}
-@baseUrl = http://localhost:3000
-//@baseUrl = https://api.shop.506software.com
+//@baseUrl = http://localhost:3000
+@baseUrl = https://api.shop.506software.com
 
 ### ===========================================
 ### 1. HEALTH CHECK

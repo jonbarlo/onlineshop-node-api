@@ -76,6 +76,8 @@ Admin Endpoints (JWT Protected):
 ✅ POST /api/admin/products - Create new product
 ✅ PUT /api/admin/products/:id - Update product
 ✅ DELETE /api/admin/products/:id - Delete product
+✅ POST /api/upload/product-image - Upload product image
+✅ DELETE /api/upload/product-image/:filename - Delete product image
 
 ## 📚 API Endpoints
 
@@ -134,7 +136,8 @@ Admin Endpoints (JWT Protected):
 
 #### Products Management
 - `GET /api/admin/products` - List all products (including inactive)
-  - Query params: `page`, `limit`, `search`
+  - Query params: `page`, `limit`
+  - Returns: Paginated list with both active and inactive products
 - `POST /api/admin/products` - Create new product
   ```json
   {
@@ -144,8 +147,29 @@ Admin Endpoints (JWT Protected):
     "imageUrl": "https://example.com/image.jpg"
   }
   ```
+  - Required: `name`, `description`, `price`
+  - Optional: `imageUrl`
 - `PUT /api/admin/products/:id` - Update product
+  ```json
+  {
+    "name": "Updated Name",
+    "description": "Updated description",
+    "price": 39.99,
+    "imageUrl": "https://example.com/new-image.jpg",
+    "isActive": true
+  }
+  ```
+  - All fields optional - only update fields you want to change
 - `DELETE /api/admin/products/:id` - Delete product (soft delete)
+  - Sets `isActive: false` instead of hard delete
+
+#### File Upload
+- `POST /api/upload/product-image` - Upload product image
+  - Content-Type: `multipart/form-data`
+  - Field: `image` (file)
+  - Size limit: 5MB
+  - Allowed types: JPEG, JPG, PNG, GIF, WebP
+- `DELETE /api/upload/product-image/:filename` - Delete product image
 
 #### Dashboard
 - `GET /api/admin/dashboard` - Dashboard statistics
