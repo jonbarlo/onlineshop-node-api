@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
-import transporter, { emailConfigs } from '@/config/email';
-import { SendEmailRequest, EmailResponse, OrderConfirmationData, NewOrderNotificationData } from '@/types/email';
-import logger from '@/utils/logger';
+import transporter, { emailConfigs } from '../config/email';
+import { SendEmailRequest, EmailResponse, OrderConfirmationData, NewOrderNotificationData } from '../types/email';
+import logger from '../utils/logger';
 
 export class EmailService {
   private transporter: nodemailer.Transporter;

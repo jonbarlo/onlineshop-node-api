@@ -1,11 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { prisma } from '@/config/database';
-import { CreateOrderRequest, OrderResponse, ORDER_STATUS } from '@/types/order';
-import { ApiResponse } from '@/types/api';
-import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from '@/utils/constants';
-import { asyncHandler } from '@/middlewares/error';
-import { validateCreateOrder } from '@/middlewares/validation';
+import { prisma } from '../config/database';
+import { CreateOrderRequest, OrderResponse, ORDER_STATUS } from '../types/order';
+import { ApiResponse } from '../types/api';
+import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from '../utils/constants';
+import { asyncHandler } from '../middlewares/error';
+import { validateCreateOrder } from '../middlewares/validation';
 
 const router = Router();
 

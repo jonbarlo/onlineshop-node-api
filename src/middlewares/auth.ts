@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { config } from '@/config';
-import { JwtPayload } from '@/types/jwt';
-import { ERROR_MESSAGES, HTTP_STATUS } from '@/utils/constants';
-import { ApiResponse } from '@/types/api';
+import { config } from '../config';
+import { JwtPayload } from '../types/jwt';
+import { ERROR_MESSAGES, HTTP_STATUS } from '../utils/constants';
+import { ApiResponse } from '../types/api';
 
 // Extend Request interface to include user
 declare global {

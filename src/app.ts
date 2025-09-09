@@ -3,19 +3,33 @@ import helmet from 'helmet';
 import path from 'path';
 import dotenv from 'dotenv';
 
-// Load environment variables from project root
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+// Test dotenv loading with different path patterns
+let dotenvResult = null;
+let envPath = null;
 
-import { config } from '@/config';
-import { corsMiddleware, corsHandler } from '@/middlewares/cors';
-import { errorHandler, notFoundHandler } from '@/middlewares/error';
-import logger from '@/utils/logger';
+try {
+  // Try the Mochahost pattern: __dirname + '../.env'
+  envPath = path.resolve(__dirname, '../.env');
+  dotenvResult = dotenv.config({ path: envPath });
+  console.log('Dotenv loaded successfully');
+} catch (error) {
+  console.error('Dotenv loading failed:', error);
+}
+
+// Use dotenvResult to avoid TS6133 error
+console.log('Dotenv result:', !!dotenvResult);
+
+import { config } from './config';
+import { corsMiddleware, corsHandler } from './middlewares/cors';
+import { errorHandler, notFoundHandler } from './middlewares/error';
+import logger from './utils/logger';
 
 // Import routes
-import authRoutes from '@/api/auth';
-import productRoutes from '@/api/products';
-import orderRoutes from '@/api/orders';
-import adminRoutes from '@/api/admin';
+import authRoutes from './api/auth';
+import productRoutes from './api/products';
+import orderRoutes from './api/orders';
+import adminRoutes from './api/admin';
+import uploadRoutes from './api/upload';
 
 const app = express();
 
@@ -69,6 +83,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Root endpoint
 app.get('/', (_req, res) => {

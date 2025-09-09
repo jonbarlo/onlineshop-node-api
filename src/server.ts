@@ -1,9 +1,7 @@
 import app from './app';
-import { config } from '@/config';
-import { prisma } from '@/config/database';
-import logger from '@/utils/logger';
-
-const PORT = config.port;
+import { config } from './config';
+import { prisma } from './config/database';
+import logger from './utils/logger';
 
 async function startServer() {
   try {
@@ -11,12 +9,13 @@ async function startServer() {
     await prisma.$connect();
     logger.info('✅ Database connected successfully');
 
-    // Start the server
-    const server = app.listen(PORT, () => {
-      logger.info(`🚀 SimpleShop API running on port ${PORT}`);
-      logger.info(`📊 Health check: http://localhost:${PORT}/health`);
+    // Start the server - use exact working pattern
+    const port = process.env.PORT || 3000;
+    const server = app.listen(port, () => {
+      logger.info(`🚀 SimpleShop API running on port ${port}`);
+      logger.info(`📊 Health check: /health`);
       logger.info(`🌍 Environment: ${config.nodeEnv}`);
-      logger.info(`📧 Manager email: ${process.env['MANAGER_EMAIL'] || 'Not configured'}`);
+      logger.info(`📧 Manager email: ${process.env.MANAGER_EMAIL || 'Not configured'}`);
     });
 
     // Graceful shutdown

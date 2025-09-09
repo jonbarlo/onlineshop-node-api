@@ -1,10 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { prisma } from '@/config/database';
-import { ProductResponse, ProductSummary } from '@/types/product';
-import { ApiResponse } from '@/types/api';
-import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from '@/utils/constants';
-import { asyncHandler } from '@/middlewares/error';
-import { validateProductId, validatePagination } from '@/middlewares/validation';
+import { prisma } from '../config/database';
+import { ProductResponse, ProductSummary } from '../types/product';
+import { ApiResponse } from '../types/api';
+import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from '../utils/constants';
+import { asyncHandler } from '../middlewares/error';
+import { validateProductId, validatePagination } from '../middlewares/validation';
 
 const router = Router();
 

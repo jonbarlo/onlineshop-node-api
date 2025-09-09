@@ -84,28 +84,187 @@ your-app/
 ---
 
 ## web.config for IIS/iisnode
-- Place `web.config` in the project root.
-- Example:
-  ```xml
-  <configuration>
-    <system.webServer>
-      <iisnode loggingEnabled="false" devErrorsEnabled="true" nodeProcessCommandLine="C:\Program Files\nodejs\node.exe"/>
-      <handlers>
-        <add name="iisnode" path="*.js" verb="*" modules="iisnode"/>
-      </handlers>
-      <rewrite>
-        <rules>
-          <rule name="MainApp">
-            <action type="Rewrite" url="dist/index.js"/>
-          </rule>
-        </rules>
-      </rewrite>
-    </system.webServer>
-  </configuration>
-  ```
-- This routes all requests to your main app (`dist/index.js`).
-- Disables iisnode logging (fixes permission errors).
-- Enables dev errors for easier debugging.
+
+### ⚠️ CRITICAL: Keep web.config MINIMAL
+
+**Mochahost shared hosting is extremely sensitive to web.config complexity. Complex configurations will cause 500 Internal Server Error even with working code.**
+
+### ✅ CORRECT (Minimal) web.config:
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <system.webServer>
+    <iisnode 
+      nodeProcessCommandLine="C:\Program Files\nodejs\node.exe"
+      loggingEnabled="true"
+      devErrorsEnabled="true"
+      />
+    <handlers>
+      <add name="iisnode" path="*.js" verb="*" modules="iisnode"/>
+    </handlers>
+    <rewrite>
+      <rules>
+        <rule name="MainApp" stopProcessing="true">
+          <match url=".*" />
+          <action type="Rewrite" url="dist/server.js"/>
+        </rule>
+      </rules>
+    </rewrite>
+  </system.webServer>
+</configuration>
+```
+
+### ❌ AVOID (Complex) web.config:
+- **DON'T** add `<security>` sections
+- **DON'T** add `<httpErrors>` configuration
+- **DON'T** add `<staticContent>` settings
+- **DON'T** add complex `<iisnode>` parameters
+- **DON'T** add multiple rewrite rules
+- **DON'T** add verbose logging settings
+
+### Why This Matters:
+- Complex web.config sections require server-level permissions we don't have
+- Additional settings can conflict with Mochahost's default IIS configuration
+- The simpler the web.config, the more likely it is to work on shared hosting
+- **If you get 500 errors with working code, simplify your web.config first**
+
+### Key Rules:
+1. **Only include essential iisnode parameters**
+2. **Use simple rewrite rules**
+3. **Avoid security and error handling sections**
+4. **Test with minimal config first, then add complexity gradually**
+
+---
+
+## ⚠️ CRITICAL: Environment Variable Access Pattern
+
+**Mochahost shared hosting has issues with bracket notation for environment variables.**
+
+### ❌ WRONG (causes 500 errors):
+```js
+process.env['NODE_ENV']
+process.env['PORT']
+process.env['JWT_SECRET']
+process.env['DATABASE_URL']
+```
+
+### ✅ CORRECT (works properly):
+```js
+process.env.NODE_ENV
+process.env.PORT
+process.env.JWT_SECRET
+process.env.DATABASE_URL
+```
+
+### Why This Matters:
+- **Bracket notation** (`process.env['VAR']`) can cause 500 Internal Server Error on Mochahost
+- **Dot notation** (`process.env.VAR`) works reliably
+- This applies to **all environment variable access** in your code
+- **TypeScript** often uses bracket notation by default - be careful!
+
+### Fix Your Code:
+Search and replace all instances of `process.env['` with `process.env.` in your codebase.
+
+---
+
+## ⚠️ CRITICAL: Error Handling for dotenv Loading
+
+**Mochahost shared hosting requires error handling around dotenv loading.**
+
+### ❌ WRONG (causes 500 errors):
+```js
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+```
+
+### ✅ CORRECT (works properly):
+```js
+try {
+  dotenv.config({ path: path.resolve(__dirname, '../.env') });
+  console.log('Environment variables loaded successfully');
+} catch (error) {
+  console.error('Failed to load environment variables:', error);
+}
+```
+
+### Why This Matters:
+- **Without error handling**, dotenv loading failures cause 500 Internal Server Error
+- **With error handling**, the application continues running even if .env loading fails
+- This applies to **all dotenv.config() calls** in your codebase
+- **Always wrap dotenv loading in try/catch blocks**
+
+### Fix Your Code:
+Add error handling around all `dotenv.config()` calls in your config files.
+
+---
+
+## ⚠️ CRITICAL: Exact Dotenv Loading Pattern for Mochahost
+
+**Mochahost shared hosting requires a specific dotenv loading pattern to work reliably.**
+
+### ❌ WRONG (causes 500 errors):
+```js
+// Simple dotenv loading
+dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+// Or with basic error handling
+try {
+  dotenv.config({ path: path.resolve(__dirname, '.env') });
+} catch (error) {
+  console.error('Failed to load environment variables:', error);
+}
+```
+
+### ✅ CORRECT (works reliably):
+```js
+// Exact pattern that works on Mochahost
+let dotenvResult = null;
+let envPath = null;
+
+try {
+  envPath = path.resolve(__dirname, '.env');
+  dotenvResult = dotenv.config({ path: envPath });
+  console.log('Dotenv loaded successfully');
+} catch (error) {
+  console.error('Dotenv loading failed:', error);
+}
+```
+
+### Why This Pattern Works:
+- **Variable declarations** (`let dotenvResult = null; let envPath = null;`) help with hoisting
+- **Explicit path assignment** (`envPath = path.resolve(__dirname, '.env')`) ensures proper resolution
+- **Result capture** (`dotenvResult = dotenv.config(...)`) provides debugging info
+- **Consistent error handling** prevents silent failures
+
+### Port Handling:
+```js
+// Always use this pattern for port handling
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
+```
+
+**CRITICAL: Never assign ports in production on Mochahost!**
+- **IIS/iisnode automatically manages ports** in production
+- **Always use**: `const port = process.env.PORT || 3000;`
+- **Never use**: `const port = process.env.NODE_ENV === 'production' ? undefined : process.env.PORT;`
+- **Let IIS handle port assignment** - don't interfere with it
+
+### Test Your Setup:
+Create a test endpoint to verify dotenv loading:
+```js
+app.get('/test', (req, res) => {
+  res.json({
+    dotenvLoaded: !!dotenvResult,
+    envPath: envPath,
+    dotenvError: dotenvResult?.error || null,
+    nodeEnv: process.env.NODE_ENV,
+    hasJwtSecret: !!process.env.JWT_SECRET,
+    hasDatabaseUrl: !!process.env.DATABASE_URL,
+    timestamp: new Date().toISOString()
+  });
+});
+```
 
 ---
 
@@ -192,10 +351,74 @@ your-app/
 ## Troubleshooting Checklist
 - `.env` is in the project root (not in `dist/`)
 - Main entry file is in `dist/` and matches `web.config`
+- **web.config is MINIMAL (no complex sections)**
 - Only one Sequelize instance is used
 - JWT payload and middleware are consistent
 - All endpoints return JSON errors (not HTML 500)
 - Remove debug output before production
+
+### 500 Internal Server Error? Check This First:
+1. **Use exact dotenv loading pattern** - `let dotenvResult = null; let envPath = null;` with try/catch
+2. **Fix environment variable access** - use `process.env.VAR` not `process.env['VAR']`
+3. **Add error handling for dotenv loading** - wrap `dotenv.config()` in `try/catch`
+4. **Fix port handling** - use `const port = process.env.PORT || 3000;` (never assign undefined in production)
+5. **Simplify web.config** - remove all non-essential sections
+6. **Test with minimal web.config** - only iisnode, handlers, and basic rewrite
+7. **Verify file paths** - ensure web.config points to correct entry file
+8. **Check file permissions** - ensure files are readable by IIS
+
+## ⚠️ CRITICAL: The Root Cause of 500 Errors
+
+**After extensive debugging, the root cause of persistent 500 Internal Server Error on Mochahost was:**
+
+### The Problem:
+The main API files (`src/app.ts`, `src/server.ts`, `src/config/*.ts`) were using **inconsistent dotenv loading patterns** compared to the working test files.
+
+### The Solution:
+**ALL dotenv loading must use the EXACT pattern:**
+```js
+// Test dotenv loading with different path patterns
+let dotenvResult = null;
+let envPath = null;
+
+try {
+  // Try the Mochahost pattern: __dirname + '../.env'
+  envPath = path.resolve(__dirname, '../.env');
+  dotenvResult = dotenv.config({ path: envPath });
+  console.log('Dotenv loaded successfully');
+} catch (error) {
+  console.error('Dotenv loading failed:', error);
+}
+
+// Use dotenvResult to avoid TS6133 error
+console.log('Dotenv result:', !!dotenvResult);
+```
+
+### Why This Matters:
+- **Variable declarations** (`let dotenvResult = null; let envPath = null;`) help with hoisting
+- **Explicit path assignment** (`envPath = path.resolve(__dirname, '../.env')`) ensures proper resolution
+- **Result capture** (`dotenvResult = dotenv.config(...)`) provides debugging info
+- **Using the variable** (`console.log('Dotenv result:', !!dotenvResult);`) prevents TypeScript unused variable errors
+- **Consistent error handling** prevents silent failures
+
+### Files That Must Use This Pattern:
+- `src/app.ts`
+- `src/config/index.ts`
+- `src/config/database.ts`
+- `src/config/email.ts`
+- `prisma/seed.ts`
+- Any file that loads environment variables
+
+### Port Handling:
+```js
+// Always use this pattern for port handling
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
+```
+
+**This exact pattern was tested and confirmed working on Mochahost shared hosting.**
 
 ---
 

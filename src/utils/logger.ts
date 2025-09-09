@@ -1,5 +1,5 @@
 import winston from 'winston';
-import { config } from '@/config';
+import { config } from '../config';
 
 // Create logs directory if it doesn't exist
 // const logDir = path.dirname(config.logging.file);

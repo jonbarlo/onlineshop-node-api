@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
-import { ApiResponse, ValidationError } from '@/types/api';
-import { ERROR_MESSAGES, HTTP_STATUS } from '@/utils/constants';
+import { ApiResponse, ValidationError } from '../types/api';
+import { ERROR_MESSAGES, HTTP_STATUS } from '../utils/constants';
 
 export const handleValidationErrors = (
   req: Request,

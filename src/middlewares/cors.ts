@@ -1,15 +1,24 @@
 import { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import { config } from '@/config';
+import { config } from '../config';
 
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     // Allow requests with no origin (mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
     
+    // Debug: Log the origin being checked
+    console.log('CORS checking origin:', origin);
+    console.log('Allowed origins:', config.cors.origin);
+    
     // Check if origin is allowed
     const allowedOrigins = config.cors.origin.split(',').map(o => o.trim());
     if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+      return callback(null, true);
+    }
+    
+    // For development, allow any localhost origin
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
       return callback(null, true);
     }
     

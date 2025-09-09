@@ -60,6 +60,23 @@ A modern Node.js + TypeScript REST API for a direct payment and order management
    - Products: `GET http://localhost:3000/api/products`
    - Admin login: `POST http://localhost:3000/api/auth/login`
 
+🎯 Current API Endpoints Available:
+Public Endpoints:
+✅ GET /health - Health check
+✅ GET /api/products - List all products
+✅ GET /api/products/:id - Get product by ID
+✅ POST /api/orders - Create new order
+Admin Endpoints (JWT Protected):
+✅ POST /api/auth/login - Admin login
+✅ GET /api/admin/orders - List all orders
+✅ GET /api/admin/orders/:id - Get order by ID
+✅ PUT /api/admin/orders/:id/status - Update order status
+✅ GET /api/admin/dashboard - Dashboard statistics
+✅ GET /api/admin/products - List all products (admin view)
+✅ POST /api/admin/products - Create new product
+✅ PUT /api/admin/products/:id - Update product
+✅ DELETE /api/admin/products/:id - Delete product
+
 ## 📚 API Endpoints
 
 ### Public Endpoints

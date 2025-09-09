@@ -1,13 +1,18 @@
 ### SimpleShop API - Complete Test Suite
-### Base URL: http://localhost:3000
 ### This file contains all API endpoints for comprehensive testing
+
+//baseUrl = http://localhost:3000
+//baseUrl = https://api.shop.506software.com
+//@baseUrl = {{baseUrl}}
+@baseUrl = http://localhost:3000
+//@baseUrl = https://api.shop.506software.com
 
 ### ===========================================
 ### 1. HEALTH CHECK
 ### ===========================================
 
 ### Health Check
-GET http://localhost:3000/health
+GET {{baseUrl}}/health
 
 ### ===========================================
 ### 2. AUTHENTICATION
@@ -15,7 +20,7 @@ GET http://localhost:3000/health
 
 ### Admin Login
 # @name login
-POST http://localhost:3000/api/auth/login
+POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
 
 {
@@ -31,16 +36,16 @@ Content-Type: application/json
 ### ===========================================
 
 ### Get All Products
-GET http://localhost:3000/api/products
+GET {{baseUrl}}/api/products
 
 ### Get Products with Pagination
-GET http://localhost:3000/api/products?page=1&limit=2
+GET {{baseUrl}}/api/products?page=1&limit=2
 
 ### Get Products with Search
-GET http://localhost:3000/api/products?search=Sample
+GET {{baseUrl}}/api/products?search=Sample
 
 ### Get Product by ID
-GET http://localhost:3000/api/products/1
+GET {{baseUrl}}/api/products/1
 
 ### ===========================================
 ### 4. ORDER CREATION
@@ -48,7 +53,7 @@ GET http://localhost:3000/api/products/1
 
 ### Create New Order
 # @name createOrder
-POST http://localhost:3000/api/orders
+POST {{baseUrl}}/api/orders
 Content-Type: application/json
 
 {
@@ -76,19 +81,19 @@ Content-Type: application/json
 ### ===========================================
 
 ### Get All Orders (Admin)
-GET http://localhost:3000/api/admin/orders
+GET {{baseUrl}}/api/admin/orders
 Authorization: Bearer {{token}}
 
 ### Get Orders with Filters
-GET http://localhost:3000/api/admin/orders?status=new&page=1&limit=5
+GET {{baseUrl}}/api/admin/orders?status=new&page=1&limit=5
 Authorization: Bearer {{token}}
 
 ### Get Specific Order
-GET http://localhost:3000/api/admin/orders/{{orderId}}
+GET {{baseUrl}}/api/admin/orders/{{orderId}}
 Authorization: Bearer {{token}}
 
 ### Update Order Status
-PUT http://localhost:3000/api/admin/orders/{{orderId}}/status
+PUT {{baseUrl}}/api/admin/orders/{{orderId}}/status
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -97,16 +102,16 @@ Content-Type: application/json
 }
 
 ### Get Dashboard Statistics
-GET http://localhost:3000/api/admin/dashboard
+GET {{baseUrl}}/api/admin/dashboard
 Authorization: Bearer {{token}}
 
 ### Get All Products (Admin)
-GET http://localhost:3000/api/admin/products
+GET {{baseUrl}}/api/admin/products
 Authorization: Bearer {{token}}
 
 ### Create New Product
 # @name createProduct
-POST http://localhost:3000/api/admin/products
+POST {{baseUrl}}/api/admin/products
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -121,7 +126,7 @@ Content-Type: application/json
 @productId = {{createProduct.response.body.data.id}}
 
 ### Update Product
-PUT http://localhost:3000/api/admin/products/{{productId}}
+PUT {{baseUrl}}/api/admin/products/{{productId}}
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -132,7 +137,7 @@ Content-Type: application/json
 }
 
 ### Delete Product
-DELETE http://localhost:3000/api/admin/products/{{productId}}
+DELETE {{baseUrl}}/api/admin/products/{{productId}}
 Authorization: Bearer {{token}}
 
 ### ===========================================
@@ -140,7 +145,7 @@ Authorization: Bearer {{token}}
 ### ===========================================
 
 ### Invalid Login
-POST http://localhost:3000/api/auth/login
+POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
 
 {
@@ -149,21 +154,21 @@ Content-Type: application/json
 }
 
 ### Access Protected Endpoint Without Token
-GET http://localhost:3000/api/admin/orders
+GET {{baseUrl}}/api/admin/orders
 
 ### Access Protected Endpoint With Invalid Token
-GET http://localhost:3000/api/admin/orders
+GET {{baseUrl}}/api/admin/orders
 Authorization: Bearer invalid_token
 
 ### Get Non-existent Product
-GET http://localhost:3000/api/products/999
+GET {{baseUrl}}/api/products/999
 
 ### Get Non-existent Order
-GET http://localhost:3000/api/admin/orders/999
+GET {{baseUrl}}/api/admin/orders/999
 Authorization: Bearer {{token}}
 
 ### Create Order with Invalid Data
-POST http://localhost:3000/api/orders
+POST {{baseUrl}}/api/orders
 Content-Type: application/json
 
 {
@@ -173,7 +178,7 @@ Content-Type: application/json
 }
 
 ### Update Order with Invalid Status
-PUT http://localhost:3000/api/admin/orders/1/status
+PUT {{baseUrl}}/api/admin/orders/1/status
 Authorization: Bearer {{token}}
 Content-Type: application/json
 

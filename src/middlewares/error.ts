@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
-import { config } from '@/config';
-import logger from '@/utils/logger';
-import { ErrorResponse } from '@/types/api';
-import { ERROR_MESSAGES, HTTP_STATUS } from '@/utils/constants';
+import { config } from '../config';
+import logger from '../utils/logger';
+import { ErrorResponse } from '../types/api';
+import { ERROR_MESSAGES, HTTP_STATUS } from '../utils/constants';
 
 export interface AppError extends Error {
   statusCode?: number;

@@ -1,11 +1,11 @@
 import { Router, Request, Response } from 'express';
-import { prisma } from '@/config/database';
-import { OrderResponse, OrderSummary, OrderStatus, UpdateOrderStatusRequest, ORDER_STATUS } from '@/types/order';
-import { ApiResponse, PaginatedResponse } from '@/types/api';
-import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from '@/utils/constants';
-import { asyncHandler } from '@/middlewares/error';
-import { authenticateToken, requireAdmin } from '@/middlewares/auth';
-import { validateOrderId, validateUpdateOrderStatus, validatePagination, validateOrderStatusFilter } from '@/middlewares/validation';
+import { prisma } from '../config/database';
+import { OrderResponse, OrderSummary, OrderStatus, UpdateOrderStatusRequest, ORDER_STATUS } from '../types/order';
+import { ApiResponse, PaginatedResponse } from '../types/api';
+import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from '../utils/constants';
+import { asyncHandler } from '../middlewares/error';
+import { authenticateToken, requireAdmin } from '../middlewares/auth';
+import { validateOrderId, validateUpdateOrderStatus, validatePagination, validateOrderStatusFilter } from '../middlewares/validation';
 
 const router = Router();
 

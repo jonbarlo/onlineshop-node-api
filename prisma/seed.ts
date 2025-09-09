@@ -4,7 +4,13 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 // Load environment variables
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+// CRITICAL: Use __dirname pattern for Mochahost compatibility
+try {
+  dotenv.config({ path: path.resolve(__dirname, '../.env') });
+  console.log('Environment variables loaded successfully');
+} catch (error) {
+  console.error('Failed to load environment variables:', error);
+}
 
 const prisma = new PrismaClient();
 
@@ -12,15 +18,15 @@ async function main() {
   console.log('🌱 Starting database seed...');
 
   // Create admin user
-  const adminPassword = process.env['ADMIN_PASSWORD'] || 'admin123';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
   const hashedPassword = await bcrypt.hash(adminPassword, 12);
 
   const adminUser = await prisma.user.upsert({
     where: { username: 'admin' },
     update: {},
     create: {
-      username: process.env['ADMIN_USERNAME'] || 'admin',
-      email: process.env['ADMIN_EMAIL'] || 'admin@simpleshop.com',
+      username: process.env.ADMIN_USERNAME || 'admin',
+      email: process.env.ADMIN_EMAIL || 'admin@simpleshop.com',
       passwordHash: hashedPassword,
       isActive: true,
     },
