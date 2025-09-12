@@ -7,7 +7,7 @@ import { ApiResponse, PaginatedResponse } from '../types/api';
 import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from '../utils/constants';
 import { asyncHandler } from '../middlewares/error';
 import { authenticateToken, requireAdmin } from '../middlewares/auth';
-import { validateOrderId, validateUpdateOrderStatus, validatePagination, validateOrderStatusFilter, validateProductId } from '../middlewares/validation';
+import { validateOrderId, validateUpdateOrderStatus, validatePagination, validateOrderStatusFilter, validateProductId, validateCreateProduct, validateUpdateProduct } from '../middlewares/validation';
 
 const router = Router();
 
@@ -145,6 +145,20 @@ router.put('/orders/:id/status', validateOrderId, validateUpdateOrderStatus, asy
   // Check if order exists
   const existingOrder = await prisma.order.findUnique({
     where: { id: orderId },
+    include: {
+      items: {
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              quantity: true,
+              status: true,
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!existingOrder) {
@@ -157,10 +171,52 @@ router.put('/orders/:id/status', validateOrderId, validateUpdateOrderStatus, asy
     return;
   }
 
-  // Update order status
-  const updatedOrder = await prisma.order.update({
+  // If updating to paid status, deduct inventory
+  if (status === ORDER_STATUS.PAID && existingOrder.status !== ORDER_STATUS.PAID) {
+    // Check if all products have sufficient quantity
+    for (const item of existingOrder.items) {
+      if (item.product.quantity < item.quantity) {
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
+          success: false,
+          message: 'Insufficient inventory',
+          error: `Product "${item.product.name}" only has ${item.product.quantity} units available, but ${item.quantity} were ordered`,
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+    }
+
+    // Deduct inventory in a transaction
+    await prisma.$transaction(async (tx: any) => {
+      // Update each product's quantity
+      for (const item of existingOrder.items) {
+        const newQuantity = item.product.quantity - item.quantity;
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            quantity: newQuantity,
+            status: newQuantity > 0 ? 'available' : 'sold_out',
+          },
+        });
+      }
+
+      // Update order status
+      await tx.order.update({
+        where: { id: orderId },
+        data: { status },
+      });
+    });
+  } else {
+    // For other status updates, just update the order
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { status },
+    });
+  }
+
+  // Fetch updated order with all details
+  const updatedOrder = await prisma.order.findUnique({
     where: { id: orderId },
-    data: { status },
     include: {
       items: {
         include: {
@@ -175,6 +231,16 @@ router.put('/orders/:id/status', validateOrderId, validateUpdateOrderStatus, asy
       },
     },
   });
+
+  if (!updatedOrder) {
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Failed to fetch updated order',
+      error: 'Order not found after update',
+      timestamp: new Date().toISOString(),
+    });
+    return;
+  }
 
   const orderResponse: OrderResponse = {
     id: updatedOrder.id,
@@ -208,24 +274,95 @@ router.put('/orders/:id/status', validateOrderId, validateUpdateOrderStatus, asy
   });
 }));
 
-// GET /api/admin/dashboard - Get dashboard statistics
+// GET /api/admin/dashboard - Get comprehensive dashboard statistics
 router.get('/dashboard', asyncHandler(async (_req: Request, res: Response<ApiResponse<any>>) => {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfWeek = new Date(now.getTime() - (now.getDay() * 24 * 60 * 60 * 1000));
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+
   const [
+    // Order counts
     totalOrders,
     newOrders,
     paidOrders,
     readyOrders,
     totalRevenue,
+    todayRevenue,
+    weekRevenue,
+    monthRevenue,
+    yearRevenue,
+    
+    // Product counts
+    totalProducts,
+    activeProducts,
+    soldOutProducts,
+    lowStockProducts,
+    
+    // Recent orders
     recentOrders,
+    
+    // Recent products
+    recentProducts,
+    
+    // Category statistics
+    categoryStats,
+    
+    // Order trends
+    ordersLast7Days,
+    ordersLast30Days,
+    
+    // Customer statistics
+    customerStats,
   ] = await Promise.all([
+    // Order counts
     prisma.order.count(),
     prisma.order.count({ where: { status: ORDER_STATUS.NEW } }),
     prisma.order.count({ where: { status: ORDER_STATUS.PAID } }),
     prisma.order.count({ where: { status: ORDER_STATUS.READY_FOR_DELIVERY } }),
+    
+    // Revenue calculations
     prisma.order.aggregate({
       where: { status: { in: [ORDER_STATUS.PAID, ORDER_STATUS.READY_FOR_DELIVERY] } },
       _sum: { totalAmount: true },
     }),
+    prisma.order.aggregate({
+      where: { 
+        status: { in: [ORDER_STATUS.PAID, ORDER_STATUS.READY_FOR_DELIVERY] },
+        createdAt: { gte: startOfToday }
+      },
+      _sum: { totalAmount: true },
+    }),
+    prisma.order.aggregate({
+      where: { 
+        status: { in: [ORDER_STATUS.PAID, ORDER_STATUS.READY_FOR_DELIVERY] },
+        createdAt: { gte: startOfWeek }
+      },
+      _sum: { totalAmount: true },
+    }),
+    prisma.order.aggregate({
+      where: { 
+        status: { in: [ORDER_STATUS.PAID, ORDER_STATUS.READY_FOR_DELIVERY] },
+        createdAt: { gte: startOfMonth }
+      },
+      _sum: { totalAmount: true },
+    }),
+    prisma.order.aggregate({
+      where: { 
+        status: { in: [ORDER_STATUS.PAID, ORDER_STATUS.READY_FOR_DELIVERY] },
+        createdAt: { gte: startOfYear }
+      },
+      _sum: { totalAmount: true },
+    }),
+    
+    // Product counts
+    prisma.product.count(),
+    prisma.product.count({ where: { isActive: true, status: 'available' } }),
+    prisma.product.count({ where: { status: 'sold_out' } }),
+    prisma.product.count({ where: { quantity: { lte: 5, gt: 0 }, status: 'available' } }),
+    
+    // Recent orders
     prisma.order.findMany({
       take: 5,
       orderBy: { createdAt: 'desc' },
@@ -238,24 +375,136 @@ router.get('/dashboard', asyncHandler(async (_req: Request, res: Response<ApiRes
         createdAt: true,
       },
     }),
+    
+    // Recent products
+    prisma.product.findMany({
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        quantity: true,
+        status: true,
+        createdAt: true,
+      },
+    }),
+    
+    // Category statistics
+    prisma.category.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        name: true,
+        _count: {
+          select: {
+            products: true
+          }
+        }
+      },
+      orderBy: { sortOrder: 'asc' }
+    }),
+    
+    // Order trends
+    prisma.order.count({
+      where: {
+        createdAt: { gte: new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000)) }
+      }
+    }),
+    prisma.order.count({
+      where: {
+        createdAt: { gte: new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000)) }
+      }
+    }),
+    
+    // Customer statistics
+    prisma.order.groupBy({
+      by: ['customerEmail'],
+      _count: { customerEmail: true }
+    }),
   ]);
 
+  // Calculate inventory value (simplified - would need price * quantity in real implementation)
+  const inventoryValue = await prisma.product.aggregate({
+    where: { isActive: true },
+    _sum: { 
+      price: true 
+    },
+  });
+
   const dashboardData = {
+    // Core Statistics
     statistics: {
+      // Order Metrics
       totalOrders,
       newOrders,
       paidOrders,
       readyOrders,
+      
+      // Revenue Metrics
       totalRevenue: Number(totalRevenue._sum.totalAmount || 0),
+      todayRevenue: Number(todayRevenue._sum.totalAmount || 0),
+      weekRevenue: Number(weekRevenue._sum.totalAmount || 0),
+      monthRevenue: Number(monthRevenue._sum.totalAmount || 0),
+      yearRevenue: Number(yearRevenue._sum.totalAmount || 0),
+      
+      // Product Metrics
+      totalProducts,
+      activeProducts,
+      soldOutProducts,
+      lowStockProducts,
+      totalInventoryValue: Number(inventoryValue._sum.price || 0),
+      
+      // Customer Metrics
+      totalCustomers: Array.isArray(customerStats) ? customerStats.length : 0,
+      repeatCustomers: Array.isArray(customerStats) ? customerStats.filter((r: any) => r._count.customerEmail > 1).length : 0,
+      
+      // Trend Metrics
+      ordersLast7Days,
+      ordersLast30Days,
     },
-    recentOrders: recentOrders.map((order: any) => ({
+    
+    // Recent Activity
+    recentOrders: Array.isArray(recentOrders) ? recentOrders.map((order: any) => ({
       id: order.id,
       orderNumber: order.orderNumber,
       customerName: order.customerName,
       status: order.status as OrderStatus,
       totalAmount: Number(order.totalAmount),
       createdAt: order.createdAt.toISOString(),
-    })),
+    })) : [],
+    
+    recentProducts: Array.isArray(recentProducts) ? recentProducts.map((product: any) => ({
+      id: product.id,
+      name: product.name,
+      price: Number(product.price),
+      quantity: product.quantity,
+      status: product.status as 'available' | 'sold_out',
+      createdAt: product.createdAt.toISOString(),
+    })) : [],
+    
+    // Category Breakdown
+    categoryStats: Array.isArray(categoryStats) ? categoryStats.map((category: any) => ({
+      id: category.id,
+      name: category.name,
+      productCount: category._count?.products || 0,
+    })) : [],
+    
+    // Performance Indicators
+    performance: {
+      conversionRate: totalOrders > 0 ? ((paidOrders / totalOrders) * 100).toFixed(1) : '0.0',
+      averageOrderValue: totalOrders > 0 ? (Number(totalRevenue._sum.totalAmount || 0) / totalOrders).toFixed(2) : '0.00',
+      stockTurnover: activeProducts > 0 ? (soldOutProducts / activeProducts * 100).toFixed(1) : '0.0',
+      lowStockAlert: lowStockProducts > 0,
+    },
+    
+    // Alerts & Notifications
+    alerts: {
+      lowStock: lowStockProducts,
+      soldOut: soldOutProducts,
+      newOrders: newOrders,
+      readyForDelivery: readyOrders,
+    }
   };
 
   res.status(HTTP_STATUS.OK).json({
@@ -275,10 +524,34 @@ router.get('/products', validatePagination, asyncHandler(async (req: Request, re
   const page = parseInt(req.query['page'] as string) || 1;
   const limit = parseInt(req.query['limit'] as string) || 10;
   const skip = (page - 1) * limit;
+  
+  // Extract filter parameters
+  const status = req.query['status'] as string | undefined;
+  const isActive = req.query['isActive'] as string | undefined;
+  const search = req.query['search'] as string | undefined;
+
+  // Build where clause
+  const where: any = {};
+  
+  if (status) {
+    where.status = status;
+  }
+  
+  if (isActive !== undefined) {
+    where.isActive = isActive === 'true';
+  }
+  
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: 'insensitive' } },
+      { description: { contains: search, mode: 'insensitive' } }
+    ];
+  }
 
   // Get products with pagination (admin can see inactive products)
   const [products, total] = await Promise.all([
     prisma.product.findMany({
+      where,
       include: {
         category: {
           select: {
@@ -297,7 +570,7 @@ router.get('/products', validatePagination, asyncHandler(async (req: Request, re
       skip,
       take: limit,
     }),
-    prisma.product.count(),
+    prisma.product.count({ where }),
   ]);
 
   const productResponses: ProductResponse[] = products.map((product: any) => ({
@@ -317,6 +590,8 @@ router.get('/products', validatePagination, asyncHandler(async (req: Request, re
       createdAt: product.category.createdAt.toISOString(),
       updatedAt: product.category.updatedAt.toISOString(),
     } : null,
+    quantity: product.quantity,
+    status: product.status as 'available' | 'sold_out',
     isActive: product.isActive,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
@@ -338,9 +613,74 @@ router.get('/products', validatePagination, asyncHandler(async (req: Request, re
   });
 }));
 
+// GET /api/admin/products/:id - Get product by ID (admin view - includes inactive/sold out)
+router.get('/products/:id', validateProductId, asyncHandler(async (req: Request, res: Response<ApiResponse<ProductResponse>>) => {
+  const productId = parseInt(req.params['id']!);
+
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    include: {
+      category: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          isActive: true,
+          sortOrder: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      }
+    }
+  });
+
+  if (!product) {
+    res.status(HTTP_STATUS.NOT_FOUND).json({
+      success: false,
+      message: ERROR_MESSAGES.PRODUCT_NOT_FOUND,
+      error: 'Product not found',
+      timestamp: new Date().toISOString(),
+    });
+    return;
+  }
+
+  const productResponse: ProductResponse = {
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    price: Number(product.price),
+    ...(product.imageUrl && { imageUrl: product.imageUrl }),
+    categoryId: product.categoryId,
+    category: product.category ? {
+      id: product.category.id,
+      name: product.category.name,
+      description: product.category.description,
+      slug: product.category.slug,
+      isActive: product.category.isActive,
+      sortOrder: product.category.sortOrder,
+      createdAt: product.category.createdAt.toISOString(),
+      updatedAt: product.category.updatedAt.toISOString(),
+    } : null,
+    quantity: product.quantity,
+    status: product.status as 'available' | 'sold_out',
+    isActive: product.isActive,
+    createdAt: product.createdAt.toISOString(),
+    updatedAt: product.updatedAt.toISOString(),
+  };
+
+  res.status(HTTP_STATUS.OK).json({
+    success: true,
+    message: SUCCESS_MESSAGES.OPERATION_SUCCESS,
+    data: productResponse,
+    timestamp: new Date().toISOString(),
+  });
+}));
+
 // POST /api/admin/products - Create new product
-router.post('/products', asyncHandler(async (req: Request, res: Response<ApiResponse<ProductResponse>>) => {
-  const { name, description, price, imageUrl } = req.body as CreateProductRequest;
+router.post('/products', validateCreateProduct, asyncHandler(async (req: Request, res: Response<ApiResponse<ProductResponse>>) => {
+  const { name, description, price, imageUrl, categoryId, quantity = 0 } = req.body as CreateProductRequest;
+  const quantityNum = parseInt(quantity.toString());
 
   // Validate required fields
   if (!name || !description || price === undefined) {
@@ -353,14 +693,31 @@ router.post('/products', asyncHandler(async (req: Request, res: Response<ApiResp
   }
 
   // Create product
-  const product = await prisma.product.create({
-    data: {
-      name,
-      description,
-      price,
-      imageUrl: imageUrl || null,
-    },
-  });
+    const product = await prisma.product.create({
+      data: {
+        name,
+        description,
+        price,
+        imageUrl: imageUrl || null,
+        categoryId: categoryId || null,
+        quantity: quantityNum,
+        status: quantityNum > 0 ? 'available' : 'sold_out',
+      },
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            isActive: true,
+            sortOrder: true,
+            createdAt: true,
+            updatedAt: true
+          }
+        }
+      }
+    });
 
   const productResponse: ProductResponse = {
     id: product.id,
@@ -369,7 +726,18 @@ router.post('/products', asyncHandler(async (req: Request, res: Response<ApiResp
     price: Number(product.price),
     ...(product.imageUrl && { imageUrl: product.imageUrl }),
     categoryId: product.categoryId,
-    category: null, // New products don't have categories initially
+    category: product.category ? {
+      id: product.category.id,
+      name: product.category.name,
+      description: product.category.description,
+      slug: product.category.slug,
+      isActive: product.category.isActive,
+      sortOrder: product.category.sortOrder,
+      createdAt: product.category.createdAt.toISOString(),
+      updatedAt: product.category.updatedAt.toISOString(),
+    } : null,
+    quantity: product.quantity,
+    status: product.status as 'available' | 'sold_out',
     isActive: product.isActive,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
@@ -384,9 +752,9 @@ router.post('/products', asyncHandler(async (req: Request, res: Response<ApiResp
 }));
 
 // PUT /api/admin/products/:id - Update product
-router.put('/products/:id', validateProductId, asyncHandler(async (req: Request, res: Response<ApiResponse<ProductResponse>>) => {
+router.put('/products/:id', validateProductId, validateUpdateProduct, asyncHandler(async (req: Request, res: Response<ApiResponse<ProductResponse>>) => {
   const productId = parseInt(req.params['id']!);
-  const { name, description, price, imageUrl, isActive } = req.body as UpdateProductRequest;
+  const { name, description, price, imageUrl, categoryId, quantity, isActive } = req.body as UpdateProductRequest;
 
   // Check if product exists
   const existingProduct = await prisma.product.findUnique({
@@ -408,12 +776,32 @@ router.put('/products/:id', validateProductId, asyncHandler(async (req: Request,
   if (description !== undefined) updateData.description = description;
   if (price !== undefined) updateData.price = price;
   if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
+  if (categoryId !== undefined) updateData.categoryId = categoryId;
+  if (quantity !== undefined) {
+    updateData.quantity = parseInt(quantity.toString());
+    // Update status based on quantity
+    updateData.status = updateData.quantity > 0 ? 'available' : 'sold_out';
+  }
   if (isActive !== undefined) updateData.isActive = isActive;
 
   // Update product
   const updatedProduct = await prisma.product.update({
     where: { id: productId },
     data: updateData,
+    include: {
+      category: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          isActive: true,
+          sortOrder: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      }
+    }
   });
 
   const productResponse: ProductResponse = {
@@ -423,7 +811,18 @@ router.put('/products/:id', validateProductId, asyncHandler(async (req: Request,
     price: Number(updatedProduct.price),
     ...(updatedProduct.imageUrl && { imageUrl: updatedProduct.imageUrl }),
     categoryId: updatedProduct.categoryId,
-    category: null, // We'll need to fetch category separately if needed
+    category: updatedProduct.category ? {
+      id: updatedProduct.category.id,
+      name: updatedProduct.category.name,
+      description: updatedProduct.category.description,
+      slug: updatedProduct.category.slug,
+      isActive: updatedProduct.category.isActive,
+      sortOrder: updatedProduct.category.sortOrder,
+      createdAt: updatedProduct.category.createdAt.toISOString(),
+      updatedAt: updatedProduct.category.updatedAt.toISOString(),
+    } : null,
+    quantity: updatedProduct.quantity,
+    status: updatedProduct.status as 'available' | 'sold_out',
     isActive: updatedProduct.isActive,
     createdAt: updatedProduct.createdAt.toISOString(),
     updatedAt: updatedProduct.updatedAt.toISOString(),

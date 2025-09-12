@@ -54,6 +54,75 @@ export const validateProductId = [
   handleValidationErrors,
 ];
 
+export const validateCreateProduct = [
+  body('name')
+    .trim()
+    .notEmpty()
+    .withMessage('Product name is required')
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Product name must be between 1 and 100 characters'),
+  body('description')
+    .trim()
+    .notEmpty()
+    .withMessage('Product description is required')
+    .isLength({ min: 10, max: 1000 })
+    .withMessage('Product description must be between 10 and 1000 characters'),
+  body('price')
+    .isFloat({ min: 0 })
+    .withMessage('Price must be a positive number'),
+  body('imageUrl')
+    .optional()
+    .isURL()
+    .withMessage('Image URL must be a valid URL'),
+  body('categoryId')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Category ID must be a positive integer'),
+  body('quantity')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Quantity must be a non-negative integer'),
+  body('isActive')
+    .optional()
+    .isBoolean()
+    .withMessage('isActive must be a boolean'),
+  handleValidationErrors,
+];
+
+export const validateUpdateProduct = [
+  body('name')
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Product name must be between 1 and 100 characters'),
+  body('description')
+    .optional()
+    .trim()
+    .isLength({ min: 10, max: 1000 })
+    .withMessage('Product description must be between 10 and 1000 characters'),
+  body('price')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Price must be a positive number'),
+  body('imageUrl')
+    .optional()
+    .isURL()
+    .withMessage('Image URL must be a valid URL'),
+  body('categoryId')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Category ID must be a positive integer'),
+  body('quantity')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Quantity must be a non-negative integer'),
+  body('isActive')
+    .optional()
+    .isBoolean()
+    .withMessage('isActive must be a boolean'),
+  handleValidationErrors,
+];
+
 // Order validation rules
 export const validateCreateOrder = [
   body('customerName')

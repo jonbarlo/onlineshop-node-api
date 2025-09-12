@@ -31,6 +31,7 @@ export interface UpdateProductRequest {
   price?: number;
   imageUrl?: string;
   categoryId?: number;
+  quantity?: number;
   isActive?: boolean;
 }
 
@@ -43,6 +44,8 @@ export interface ProductResponse {
   imageUrl?: string;
   categoryId: number | null;
   category: CategoryResponse | null;
+  quantity: number;
+  status: 'available' | 'sold_out';
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -55,6 +58,8 @@ export interface ProductSummary {
   imageUrl?: string;
   categoryId: number | null;
   category: CategoryResponse | null;
+  quantity: number;
+  status: 'available' | 'sold_out';
 }
 
 // Product Filter Types

@@ -7,7 +7,7 @@ console.log('🚀 Starting POS Engine Mochahost FTP deployment script...');
 
 // Load environment variables
 import dotenv from 'dotenv';
-const envPath = path.resolve(process.cwd(), '.env');
+const envPath = path.resolve(process.cwd(), '.env.prod');
 dotenv.config({ path: envPath });
 
 // Configuration
@@ -80,7 +80,7 @@ function validateFtpConfig() {
   if (missing.length > 0) {
     console.error('❌ Missing required FTP environment variables:');
     missing.forEach(key => console.error(`   - ${key}`));
-    console.error('\nPlease add these to your .env file:');
+    console.error('\nPlease add these to your .env.prod file:');
     console.error('FTP_HOST=your-ftp-server.com');
     console.error('FTP_USER=your-username');
     console.error('FTP_PASSWORD=your-password');
@@ -260,6 +260,7 @@ async function uploadViaFtp() {
     console.log('✅ Connected to FTP server');
     
     // Navigate to remote directory
+    console.log(`📁 FTP Remote Path: ${ftpConfig.remotePath}`);
     if (ftpConfig.remotePath !== '/') {
       console.log(`📁 Navigating to remote path: ${ftpConfig.remotePath}`);
       await client.ensureDir(ftpConfig.remotePath);
@@ -267,7 +268,8 @@ async function uploadViaFtp() {
     
     // Remove remote src folder before upload (dist will be created on server)
     try {
-      await client.removeDir(ftpConfig.remotePath + '/src');
+      const srcPath = path.posix.join(ftpConfig.remotePath, 'src');
+      await client.removeDir(srcPath);
       console.log('🗑️  Removed remote src directory');
     } catch (err) {
       console.warn('⚠️  Could not remove remote src directory (may not exist):', (err as any).message);
@@ -531,9 +533,13 @@ async function deploy() {
     console.log(`📁 Local deployment directory: ${deploymentDir}`);
     console.log(`🌐 Remote location: ${ftpConfig.host}${ftpConfig.remotePath}`);
     console.log('\n📋 Next steps:');
-    console.log('1. In Plesk console, run: npm install --production');
-    console.log('2. Restart the IIS application');
-    console.log('3. Test your endpoints');
+    console.log(`1. In Plesk console, navigate to: ${ftpConfig.remotePath}`);
+    console.log('2. Run: npm install --production');
+    console.log('3. Run: npm run db:generate:server');
+    console.log('4. Run: npm run db:push');
+    console.log('5. Run: npm run build:prod');
+    console.log('6. Restart the IIS application');
+    console.log('7. Test your endpoints');
     console.log('\n🔗 Test URLs:');
     console.log(`   - https://${ftpConfig.host}/`);
     console.log(`   - https://${ftpConfig.host}/health`);

@@ -13,12 +13,13 @@ const router = Router();
 router.post('/', validateCreateOrder, asyncHandler(async (req: Request<{}, ApiResponse<OrderResponse>, CreateOrderRequest>, res: Response<ApiResponse<OrderResponse>>) => {
   const { customerName, customerEmail, customerPhone, deliveryAddress, items } = req.body;
 
-  // Validate that all products exist and are active
+  // Validate that all products exist, are active, and have sufficient quantity
   const productIds = items.map(item => item.productId);
   const products = await prisma.product.findMany({
     where: {
       id: { in: productIds },
       isActive: true,
+      status: 'available',
     },
   });
 
@@ -26,10 +27,24 @@ router.post('/', validateCreateOrder, asyncHandler(async (req: Request<{}, ApiRe
     res.status(HTTP_STATUS.BAD_REQUEST).json({
       success: false,
       message: ERROR_MESSAGES.PRODUCT_NOT_FOUND,
-      error: 'One or more products not found or inactive',
+      error: 'One or more products not found, inactive, or sold out',
       timestamp: new Date().toISOString(),
     });
     return;
+  }
+
+  // Check quantity availability
+  for (const item of items) {
+    const product = products.find((p: any) => p.id === item.productId);
+    if (product && product.quantity < item.quantity) {
+      res.status(HTTP_STATUS.BAD_REQUEST).json({
+        success: false,
+        message: 'Insufficient inventory',
+        error: `Product "${product.name}" only has ${product.quantity} units available, but ${item.quantity} were requested`,
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
   }
 
   // Calculate total amount

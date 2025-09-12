@@ -22,7 +22,10 @@ router.get('/', validatePagination, asyncHandler(async (req: Request, res: Respo
   const search = req.query['search'] as string | undefined;
 
   // Build where clause
-  const where: any = { isActive: true };
+  const where: any = { 
+    isActive: true,
+    status: 'available' // Only show available products to customers
+  };
 
   if (categoryId) {
     where.categoryId = categoryId;
@@ -87,6 +90,8 @@ router.get('/', validatePagination, asyncHandler(async (req: Request, res: Respo
       createdAt: product.category.createdAt.toISOString(),
       updatedAt: product.category.updatedAt.toISOString(),
     } : null,
+    quantity: product.quantity,
+    status: product.status as 'available' | 'sold_out',
     isActive: product.isActive,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
@@ -108,6 +113,7 @@ router.get('/:id', validateProductId, asyncHandler(async (req: Request, res: Res
     where: {
       id: productId,
       isActive: true,
+      status: 'available', // Only show available products to customers
     },
     include: {
       category: {
@@ -152,6 +158,8 @@ router.get('/:id', validateProductId, asyncHandler(async (req: Request, res: Res
       createdAt: product.category.createdAt.toISOString(),
       updatedAt: product.category.updatedAt.toISOString(),
     } : null,
+    quantity: product.quantity,
+    status: product.status as 'available' | 'sold_out',
     isActive: product.isActive,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
@@ -168,7 +176,10 @@ router.get('/:id', validateProductId, asyncHandler(async (req: Request, res: Res
 // GET /api/products/summary - Get product summaries (for cart/quick view)
 router.get('/summary/list', asyncHandler(async (_req: Request, res: Response<ApiResponse<ProductSummary[]>>) => {
   const products = await prisma.product.findMany({
-    where: { isActive: true },
+    where: { 
+      isActive: true,
+      status: 'available' // Only show available products to customers
+    },
     select: {
       id: true,
       name: true,
@@ -207,6 +218,8 @@ router.get('/summary/list', asyncHandler(async (_req: Request, res: Response<Api
       createdAt: product.category.createdAt.toISOString(),
       updatedAt: product.category.updatedAt.toISOString(),
     } : null,
+    quantity: product.quantity,
+    status: product.status as 'available' | 'sold_out',
   }));
 
   res.status(HTTP_STATUS.OK).json({
