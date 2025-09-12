@@ -70,6 +70,19 @@ A modern Node.js + TypeScript REST API for a direct payment and order management
  npx tsc --noEmit
 ```
 
+** Deploying to Mochahost **
+First run locally:
+```bash
+npm run deploy
+```
+Then run the following commands on the server:
+```bash
+npm install
+npm run db:generate:server
+npm run db:push
+npm run build:prod
+```
+
 🎯 Current API Endpoints Available:
 Public Endpoints:
 ✅ GET /health - Health check
