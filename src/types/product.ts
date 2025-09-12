@@ -1,3 +1,5 @@
+import { CategoryResponse } from './category';
+
 // Product Entity Types
 export interface Product {
   id: number;
@@ -5,6 +7,9 @@ export interface Product {
   description: string;
   price: number;
   imageUrl?: string;
+  categoryId?: number;
+  quantity: number;
+  status: 'available' | 'sold_out';
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -16,6 +21,8 @@ export interface CreateProductRequest {
   description: string;
   price: number;
   imageUrl?: string;
+  categoryId?: number;
+  quantity?: number;
 }
 
 export interface UpdateProductRequest {
@@ -23,6 +30,7 @@ export interface UpdateProductRequest {
   description?: string;
   price?: number;
   imageUrl?: string;
+  categoryId?: number;
   isActive?: boolean;
 }
 
@@ -33,6 +41,8 @@ export interface ProductResponse {
   description: string;
   price: number;
   imageUrl?: string;
+  categoryId: number | null;
+  category: CategoryResponse | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -43,4 +53,15 @@ export interface ProductSummary {
   name: string;
   price: number;
   imageUrl?: string;
+  categoryId: number | null;
+  category: CategoryResponse | null;
+}
+
+// Product Filter Types
+export interface ProductFilters {
+  categoryId?: number;
+  categorySlug?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  search?: string;
 }

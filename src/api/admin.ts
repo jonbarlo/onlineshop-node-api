@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../config/database';
 import { OrderResponse, OrderSummary, OrderStatus, UpdateOrderStatusRequest, ORDER_STATUS } from '../types/order';
 import { ProductResponse, CreateProductRequest, UpdateProductRequest } from '../types/product';
+import { CategoryResponse, CreateCategoryRequest, UpdateCategoryRequest } from '../types/category';
 import { ApiResponse, PaginatedResponse } from '../types/api';
 import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from '../utils/constants';
 import { asyncHandler } from '../middlewares/error';
@@ -278,6 +279,20 @@ router.get('/products', validatePagination, asyncHandler(async (req: Request, re
   // Get products with pagination (admin can see inactive products)
   const [products, total] = await Promise.all([
     prisma.product.findMany({
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            isActive: true,
+            sortOrder: true,
+            createdAt: true,
+            updatedAt: true
+          }
+        }
+      },
       orderBy: { createdAt: 'desc' },
       skip,
       take: limit,
@@ -291,6 +306,17 @@ router.get('/products', validatePagination, asyncHandler(async (req: Request, re
     description: product.description,
     price: Number(product.price),
     imageUrl: product.imageUrl || undefined,
+    categoryId: product.categoryId,
+    category: product.category ? {
+      id: product.category.id,
+      name: product.category.name,
+      description: product.category.description,
+      slug: product.category.slug,
+      isActive: product.category.isActive,
+      sortOrder: product.category.sortOrder,
+      createdAt: product.category.createdAt.toISOString(),
+      updatedAt: product.category.updatedAt.toISOString(),
+    } : null,
     isActive: product.isActive,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
@@ -342,6 +368,8 @@ router.post('/products', asyncHandler(async (req: Request, res: Response<ApiResp
     description: product.description,
     price: Number(product.price),
     ...(product.imageUrl && { imageUrl: product.imageUrl }),
+    categoryId: product.categoryId,
+    category: null, // New products don't have categories initially
     isActive: product.isActive,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
@@ -394,6 +422,8 @@ router.put('/products/:id', validateProductId, asyncHandler(async (req: Request,
     description: updatedProduct.description,
     price: Number(updatedProduct.price),
     ...(updatedProduct.imageUrl && { imageUrl: updatedProduct.imageUrl }),
+    categoryId: updatedProduct.categoryId,
+    category: null, // We'll need to fetch category separately if needed
     isActive: updatedProduct.isActive,
     createdAt: updatedProduct.createdAt.toISOString(),
     updatedAt: updatedProduct.updatedAt.toISOString(),
@@ -434,6 +464,224 @@ router.delete('/products/:id', validateProductId, asyncHandler(async (req: Reque
   return res.status(HTTP_STATUS.OK).json({
     success: true,
     message: 'Product deleted successfully',
+    timestamp: new Date().toISOString(),
+  });
+}));
+
+// ===== CATEGORY MANAGEMENT ENDPOINTS =====
+
+// GET /api/admin/categories - List all categories (including inactive)
+router.get('/categories', validatePagination, asyncHandler(async (req: Request, res: Response<PaginatedResponse<CategoryResponse>>) => {
+  const page = parseInt(req.query['page'] as string) || 1;
+  const limit = parseInt(req.query['limit'] as string) || 10;
+  const skip = (page - 1) * limit;
+
+  const [categories, total] = await Promise.all([
+    prisma.category.findMany({
+      orderBy: [
+        { sortOrder: 'asc' },
+        { name: 'asc' }
+      ],
+      skip,
+      take: limit,
+    }),
+    prisma.category.count(),
+  ]);
+
+  const categoryResponses: CategoryResponse[] = categories.map((category: any) => ({
+    id: category.id,
+    name: category.name,
+    description: category.description,
+    slug: category.slug,
+    isActive: category.isActive,
+    sortOrder: category.sortOrder,
+    createdAt: category.createdAt.toISOString(),
+    updatedAt: category.updatedAt.toISOString(),
+  }));
+
+  const totalPages = Math.ceil(total / limit);
+
+  res.status(HTTP_STATUS.OK).json({
+    success: true,
+    message: SUCCESS_MESSAGES.OPERATION_SUCCESS,
+    data: categoryResponses,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
+    },
+    timestamp: new Date().toISOString(),
+  });
+}));
+
+// POST /api/admin/categories - Create new category
+router.post('/categories', asyncHandler(async (req: Request<{}, ApiResponse<CategoryResponse>, CreateCategoryRequest>, res: Response<ApiResponse<CategoryResponse>>) => {
+  const { name, description, slug, sortOrder = 0 } = req.body;
+
+  // Check if category with same name or slug already exists
+  const existingCategory = await prisma.category.findFirst({
+    where: {
+      OR: [
+        { name: name },
+        { slug: slug }
+      ]
+    }
+  });
+
+  if (existingCategory) {
+    return res.status(HTTP_STATUS.CONFLICT).json({
+      success: false,
+      message: 'Category with this name or slug already exists',
+      error: 'Duplicate category',
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  const newCategory = await prisma.category.create({
+    data: {
+      name,
+      description: description || null,
+      slug,
+      sortOrder,
+    },
+  });
+
+  const categoryResponse: CategoryResponse = {
+    id: newCategory.id,
+    name: newCategory.name,
+    description: newCategory.description,
+    slug: newCategory.slug,
+    isActive: newCategory.isActive,
+    sortOrder: newCategory.sortOrder,
+    createdAt: newCategory.createdAt.toISOString(),
+    updatedAt: newCategory.updatedAt.toISOString(),
+  };
+
+  return res.status(HTTP_STATUS.CREATED).json({
+    success: true,
+    message: 'Category created successfully',
+    data: categoryResponse,
+    timestamp: new Date().toISOString(),
+  });
+}));
+
+// PUT /api/admin/categories/:id - Update category
+router.put('/categories/:id', asyncHandler(async (req: Request<{ id: string }, ApiResponse<CategoryResponse>, UpdateCategoryRequest>, res: Response<ApiResponse<CategoryResponse>>) => {
+  const categoryId = parseInt(req.params['id']!);
+  const { name, description, slug, isActive, sortOrder } = req.body;
+
+  // Check if category exists
+  const existingCategory = await prisma.category.findUnique({
+    where: { id: categoryId },
+  });
+
+  if (!existingCategory) {
+    return res.status(HTTP_STATUS.NOT_FOUND).json({
+      success: false,
+      message: 'Category not found',
+      error: 'Category not found',
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // Check if another category with same name or slug exists (excluding current one)
+  if (name || slug) {
+    const duplicateCategory = await prisma.category.findFirst({
+      where: {
+        AND: [
+          { id: { not: categoryId } },
+          {
+            OR: [
+              ...(name ? [{ name: name }] : []),
+              ...(slug ? [{ slug: slug }] : [])
+            ]
+          }
+        ]
+      }
+    });
+
+    if (duplicateCategory) {
+      return res.status(HTTP_STATUS.CONFLICT).json({
+        success: false,
+        message: 'Category with this name or slug already exists',
+        error: 'Duplicate category',
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+
+  const updatedCategory = await prisma.category.update({
+    where: { id: categoryId },
+    data: {
+      ...(name && { name }),
+      ...(description !== undefined && { description: description || null }),
+      ...(slug && { slug }),
+      ...(isActive !== undefined && { isActive }),
+      ...(sortOrder !== undefined && { sortOrder }),
+    },
+  });
+
+  const categoryResponse: CategoryResponse = {
+    id: updatedCategory.id,
+    name: updatedCategory.name,
+    description: updatedCategory.description,
+    slug: updatedCategory.slug,
+    isActive: updatedCategory.isActive,
+    sortOrder: updatedCategory.sortOrder,
+    createdAt: updatedCategory.createdAt.toISOString(),
+    updatedAt: updatedCategory.updatedAt.toISOString(),
+  };
+
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+    message: 'Category updated successfully',
+    data: categoryResponse,
+    timestamp: new Date().toISOString(),
+  });
+}));
+
+// DELETE /api/admin/categories/:id - Delete category (soft delete)
+router.delete('/categories/:id', asyncHandler(async (req: Request, res: Response<ApiResponse<void>>) => {
+  const categoryId = parseInt(req.params['id']!);
+
+  // Check if category exists
+  const existingCategory = await prisma.category.findUnique({
+    where: { id: categoryId },
+  });
+
+  if (!existingCategory) {
+    return res.status(HTTP_STATUS.NOT_FOUND).json({
+      success: false,
+      message: 'Category not found',
+      error: 'Category not found',
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // Check if category has products
+  const productCount = await prisma.product.count({
+    where: { categoryId: categoryId, isActive: true }
+  });
+
+  if (productCount > 0) {
+    return res.status(HTTP_STATUS.CONFLICT).json({
+      success: false,
+      message: 'Cannot delete category with active products',
+      error: `Category has ${productCount} active products`,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // Soft delete by setting isActive to false
+  await prisma.category.update({
+    where: { id: categoryId },
+    data: { isActive: false },
+  });
+
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+    message: 'Category deleted successfully',
     timestamp: new Date().toISOString(),
   });
 }));

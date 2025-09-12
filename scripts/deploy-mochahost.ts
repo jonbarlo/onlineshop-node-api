@@ -55,6 +55,7 @@ const ftpConfig = {
 const foldersToCopy = [
   'src',      // Source files - will be built on server
   'prisma',   // Prisma schema and migrations
+  // 'node_modules/.prisma', // Pre-generated Prisma client - excluded due to file locking issues
   // 'dist',   // Will be created on server
   // 'uploads' // Will be created on server when needed
 ];
@@ -235,7 +236,7 @@ function createDeploymentPackage() {
   }
   
   // Build the project on the server - dist will be created via Plesk
-  console.log('📁 Build files will be created on the server via Plesk console: npm install --production && npm run build');
+  console.log('📁 Build files will be created on the server via Plesk console: npm install --production && npm run db:generate:server && npm run db:push && npm run build:prod');
 }
 
 // Upload files via FTP
@@ -423,6 +424,18 @@ import path from 'path';
 const envPath = path.resolve(process.cwd(), '..', '.env');
 dotenv.config({ path: envPath });
 \`\`\`
+
+## Database Setup Required
+**IMPORTANT**: After deployment, you must run these commands on the server:
+
+1. **Install Dependencies**: \`npm install --production\`
+2. **Generate Prisma Client**: \`npm run db:generate:server\` (this skips the binary that causes permission issues)
+3. **Update Database Schema**: \`npm run db:push\`
+4. **Build the Application**: \`npm run build:prod\`
+
+Or run all at once: \`npm install --production && npm run db:generate:server && npm run db:push && npm run build:prod\`
+
+**Note**: Using \`--no-engine\` flag to avoid shared hosting permission issues with binary files.
 
 ## FTP Configuration Used
 - Host: ${ftpConfig.host}

@@ -20,6 +20,7 @@
     "prebuild": "npm run clean",
     "build:prod": "npm run clean:prod && tsc",
     "db:generate": "prisma generate",
+    "db:generate:server": "prisma generate --no-engine",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",

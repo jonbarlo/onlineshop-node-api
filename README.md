@@ -60,6 +60,16 @@ A modern Node.js + TypeScript REST API for a direct payment and order management
    - Products: `GET http://localhost:3000/api/products`
    - Admin login: `POST http://localhost:3000/api/auth/login`
 
+** Prisma Studio **
+```bash
+ npx prisma studio
+```
+
+** Running Linter **
+```bash
+ npx tsc --noEmit
+```
+
 🎯 Current API Endpoints Available:
 Public Endpoints:
 ✅ GET /health - Health check
