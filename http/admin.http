@@ -126,7 +126,7 @@ Content-Type: application/json
   "quantity": 0
 }
 
-### Update Product (now includes categoryId and quantity)
+### Update Product (now includes variants)
 PUT http://localhost:3000/api/admin/products/1
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -137,7 +137,29 @@ Content-Type: application/json
   "price": 49.99,
   "imageUrl": "https://via.placeholder.com/300x300?text=Updated+Product",
   "categoryId": 1,
-  "quantity": 15
+  "quantity": 15,
+  "colors": ["Blue", "Red"],
+  "sizes": ["S", "M", "L"],
+  "variants": [
+    {
+      "color": "Blue",
+      "size": "S",
+      "quantity": 5,
+      "sku": "UPDATED-PRODUCT-BLUE-S"
+    },
+    {
+      "color": "Blue",
+      "size": "M",
+      "quantity": 8,
+      "sku": "UPDATED-PRODUCT-BLUE-M"
+    },
+    {
+      "color": "Red",
+      "size": "L",
+      "quantity": 3,
+      "sku": "UPDATED-PRODUCT-RED-L"
+    }
+  ]
 }
 
 ### Update Product Quantity to Zero (should update status to sold_out)

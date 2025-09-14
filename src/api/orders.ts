@@ -9,11 +9,57 @@ import { validateCreateOrder } from '../middlewares/validation';
 
 const router = Router();
 
+// Helper function to find or create product variant
+async function findOrCreateProductVariant(productId: number, color?: string, size?: string) {
+  // If no color/size specified, return null (use product-level inventory)
+  if (!color || !size) {
+    return null;
+  }
+
+  // Try to find existing variant
+  let variant = await prisma.productVariant.findFirst({
+    where: {
+      productId,
+      color,
+      size,
+      isActive: true,
+    },
+  });
+
+  // If variant doesn't exist, create it with 0 quantity
+  if (!variant) {
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      select: { name: true }
+    });
+
+    if (!product) {
+      throw new Error(`Product with ID ${productId} not found`);
+    }
+
+    // Generate SKU: PRODUCT-NAME-COLOR-SIZE (simplified)
+    const sku = `${product.name.toUpperCase().replace(/\s+/g, '-')}-${color.toUpperCase()}-${size.toUpperCase()}`;
+    
+    variant = await prisma.productVariant.create({
+      data: {
+        productId,
+        color,
+        size,
+        quantity: 0, // Start with 0 inventory
+        sku,
+        isActive: true,
+      },
+    });
+  }
+
+  return variant;
+}
+
 // POST /api/orders - Create new order
 router.post('/', validateCreateOrder, asyncHandler(async (req: Request<{}, ApiResponse<OrderResponse>, CreateOrderRequest>, res: Response<ApiResponse<OrderResponse>>) => {
   const { customerName, customerEmail, customerPhone, deliveryAddress, items } = req.body;
 
-  // Validate that all products exist, are active, and have sufficient quantity
+  // Validate that all products exist and are active
   const productIds = items.map(item => item.productId);
   const products = await prisma.product.findMany({
     where: {
@@ -33,38 +79,57 @@ router.post('/', validateCreateOrder, asyncHandler(async (req: Request<{}, ApiRe
     return;
   }
 
-  // Check quantity availability
-  for (const item of items) {
-    const product = products.find((p: any) => p.id === item.productId);
-    if (product && product.quantity < item.quantity) {
-      res.status(HTTP_STATUS.BAD_REQUEST).json({
-        success: false,
-        message: 'Insufficient inventory',
-        error: `Product "${product.name}" only has ${product.quantity} units available, but ${item.quantity} were requested`,
-        timestamp: new Date().toISOString(),
-      });
-      return;
-    }
-  }
-
-  // Calculate total amount
+  // Process each item and check inventory
+  const processedItems: any[] = [];
   let totalAmount = 0;
-  const orderItems = items.map(item => {
+
+  for (const item of items) {
     const product = products.find((p: any) => p.id === item.productId);
     if (!product) {
       throw new Error(`Product with ID ${item.productId} not found`);
     }
-    
+
     const unitPrice = Number(product.price);
     const itemTotal = unitPrice * item.quantity;
     totalAmount += itemTotal;
 
-    return {
+    // Find or create variant if color/size specified
+    let variant = null;
+    if (item.selectedColor && item.selectedSize) {
+      variant = await findOrCreateProductVariant(item.productId, item.selectedColor, item.selectedSize);
+      
+      // Check variant inventory
+      if (variant && variant.quantity < item.quantity) {
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
+          success: false,
+          message: 'Insufficient inventory',
+          error: `Product "${product.name}" in ${item.selectedColor} ${item.selectedSize} only has ${variant.quantity} units available, but ${item.quantity} were requested`,
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+    } else {
+      // Check product-level inventory for items without variants
+      if (product.quantity < item.quantity) {
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
+          success: false,
+          message: 'Insufficient inventory',
+          error: `Product "${product.name}" only has ${product.quantity} units available, but ${item.quantity} were requested`,
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+    }
+
+    processedItems.push({
       productId: item.productId,
+      productVariantId: variant?.id || null,
       quantity: item.quantity,
       unitPrice,
-    };
-  });
+      selectedColor: item.selectedColor || null,
+      selectedSize: item.selectedSize || null,
+    });
+  }
 
   // Generate unique order number
   const orderNumber = `SS-${Date.now()}-${uuidv4().substring(0, 8).toUpperCase()}`;
@@ -82,7 +147,7 @@ router.post('/', validateCreateOrder, asyncHandler(async (req: Request<{}, ApiRe
         status: ORDER_STATUS.NEW,
         totalAmount,
         items: {
-          create: orderItems,
+          create: processedItems,
         },
       },
       include: {
@@ -93,6 +158,14 @@ router.post('/', validateCreateOrder, asyncHandler(async (req: Request<{}, ApiRe
                 id: true,
                 name: true,
                 imageUrl: true,
+              },
+            },
+            productVariant: {
+              select: {
+                id: true,
+                color: true,
+                size: true,
+                sku: true,
               },
             },
           },
@@ -116,13 +189,22 @@ router.post('/', validateCreateOrder, asyncHandler(async (req: Request<{}, ApiRe
     items: order.items.map((item: any) => ({
       id: item.id,
       productId: item.productId,
+      productVariantId: item.productVariantId,
       quantity: item.quantity,
       unitPrice: Number(item.unitPrice),
+      selectedColor: item.selectedColor,
+      selectedSize: item.selectedSize,
       product: {
         id: item.product.id,
         name: item.product.name,
         imageUrl: item.product.imageUrl || undefined,
       },
+      productVariant: item.productVariant ? {
+        id: item.productVariant.id,
+        color: item.productVariant.color,
+        size: item.productVariant.size,
+        sku: item.productVariant.sku,
+      } : undefined,
     })),
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),

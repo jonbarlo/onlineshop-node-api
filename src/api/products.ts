@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../config/database';
 import { ProductResponse, ProductSummary } from '../types/product';
 import { ProductImageResponse } from '../types/productImage';
+import { ProductVariantResponse } from '../types/productVariant';
 import { ApiResponse } from '../types/api';
 import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from '../utils/constants';
 import { asyncHandler } from '../middlewares/error';
@@ -20,6 +21,19 @@ const mapProductImageToResponse = (image: any): ProductImageResponse => ({
   isActive: image.isActive,
   createdAt: image.createdAt.toISOString(),
   updatedAt: image.updatedAt.toISOString(),
+});
+
+// Helper function to map ProductVariant to ProductVariantResponse
+const mapProductVariantToResponse = (variant: any): ProductVariantResponse => ({
+  id: variant.id,
+  productId: variant.productId,
+  color: variant.color,
+  size: variant.size,
+  quantity: variant.quantity,
+  sku: variant.sku,
+  isActive: variant.isActive,
+  createdAt: variant.createdAt.toISOString(),
+  updatedAt: variant.updatedAt.toISOString(),
 });
 
 // GET /api/products - List all active products with filtering
@@ -87,7 +101,7 @@ router.get('/', validatePagination, asyncHandler(async (req: Request, res: Respo
     });
   }
 
-  // Get products with pagination, category information, and images
+  // Get products with pagination, category information, images, and variants
   const products = await prisma.product.findMany({
     where,
     include: {
@@ -106,6 +120,10 @@ router.get('/', validatePagination, asyncHandler(async (req: Request, res: Respo
       images: {
         where: { isActive: true },
         orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+      },
+      variants: {
+        where: { isActive: true },
+        orderBy: [{ color: 'asc' }, { size: 'asc' }]
       }
     },
     orderBy: { createdAt: 'desc' },
@@ -116,6 +134,7 @@ router.get('/', validatePagination, asyncHandler(async (req: Request, res: Respo
   const productResponses: ProductResponse[] = products.map((product: any) => {
     const images = product.images.map(mapProductImageToResponse);
     const primaryImage = images.find((img: ProductImageResponse) => img.isPrimary) || images[0];
+    const variants = product.variants.map(mapProductVariantToResponse);
 
     return {
       id: product.id,
@@ -137,6 +156,7 @@ router.get('/', validatePagination, asyncHandler(async (req: Request, res: Respo
       quantity: product.quantity,
       colors: product.colors ? JSON.parse(product.colors) : [],
       sizes: product.sizes ? JSON.parse(product.sizes) : [],
+      variants,
       status: product.status as 'available' | 'sold_out',
       isActive: product.isActive,
       images,
@@ -180,6 +200,10 @@ router.get('/:id', validateProductId, asyncHandler(async (req: Request, res: Res
       images: {
         where: { isActive: true },
         orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+      },
+      variants: {
+        where: { isActive: true },
+        orderBy: [{ color: 'asc' }, { size: 'asc' }]
       }
     },
   });
@@ -196,6 +220,7 @@ router.get('/:id', validateProductId, asyncHandler(async (req: Request, res: Res
 
   const images = product.images.map(mapProductImageToResponse);
   const primaryImage = images.find(img => img.isPrimary) || images[0];
+  const variants = product.variants.map(mapProductVariantToResponse);
 
   const productResponse: ProductResponse = {
     id: product.id,
@@ -217,6 +242,7 @@ router.get('/:id', validateProductId, asyncHandler(async (req: Request, res: Res
     quantity: product.quantity,
     colors: product.colors ? JSON.parse(product.colors) : [],
     sizes: product.sizes ? JSON.parse(product.sizes) : [],
+    variants,
     status: product.status as 'available' | 'sold_out',
     isActive: product.isActive,
     images,
@@ -246,6 +272,10 @@ router.get('/summary/list', asyncHandler(async (_req: Request, res: Response<Api
       price: true,
       imageUrl: true,
       categoryId: true,
+      quantity: true,
+      colors: true,
+      sizes: true,
+      status: true,
       category: {
         select: {
           id: true,
@@ -272,6 +302,10 @@ router.get('/summary/list', asyncHandler(async (_req: Request, res: Response<Api
           createdAt: true,
           updatedAt: true
         }
+      },
+      variants: {
+        where: { isActive: true },
+        orderBy: [{ color: 'asc' }, { size: 'asc' }]
       }
     },
     orderBy: { name: 'asc' },
@@ -280,6 +314,7 @@ router.get('/summary/list', asyncHandler(async (_req: Request, res: Response<Api
   const productSummaries: ProductSummary[] = products.map((product: any) => {
     const images = product.images.map(mapProductImageToResponse);
     const primaryImage = images.find((img: ProductImageResponse) => img.isPrimary) || images[0];
+    const variants = product.variants.map(mapProductVariantToResponse);
 
     return {
       id: product.id,
@@ -300,6 +335,7 @@ router.get('/summary/list', asyncHandler(async (_req: Request, res: Response<Api
       quantity: product.quantity,
       colors: product.colors ? JSON.parse(product.colors) : [],
       sizes: product.sizes ? JSON.parse(product.sizes) : [],
+      variants,
       status: product.status as 'available' | 'sold_out',
       primaryImage,
     };

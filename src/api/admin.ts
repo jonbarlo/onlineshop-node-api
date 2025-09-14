@@ -3,6 +3,7 @@ import { prisma } from '../config/database';
 import { OrderResponse, OrderSummary, OrderStatus, UpdateOrderStatusRequest, ORDER_STATUS } from '../types/order';
 import { ProductResponse, CreateProductRequest, UpdateProductRequest } from '../types/product';
 import { ProductImageResponse } from '../types/productImage';
+import { ProductVariantResponse } from '../types/productVariant';
 import { CategoryResponse, CreateCategoryRequest, UpdateCategoryRequest } from '../types/category';
 import { ApiResponse, PaginatedResponse } from '../types/api';
 import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from '../utils/constants';
@@ -23,6 +24,19 @@ const mapProductImageToResponse = (image: any): ProductImageResponse => ({
   isActive: image.isActive,
   createdAt: image.createdAt.toISOString(),
   updatedAt: image.updatedAt.toISOString(),
+});
+
+// Helper function to map ProductVariant to ProductVariantResponse
+const mapProductVariantToResponse = (variant: any): ProductVariantResponse => ({
+  id: variant.id,
+  productId: variant.productId,
+  color: variant.color,
+  size: variant.size,
+  quantity: variant.quantity,
+  sku: variant.sku,
+  isActive: variant.isActive,
+  createdAt: variant.createdAt.toISOString(),
+  updatedAt: variant.updatedAt.toISOString(),
 });
 
 // Apply authentication and admin middleware to all routes
@@ -104,6 +118,14 @@ router.get('/orders/:id', validateOrderId, asyncHandler(async (req: Request, res
               imageUrl: true,
             },
           },
+          productVariant: {
+            select: {
+              id: true,
+              color: true,
+              size: true,
+              sku: true,
+            },
+          },
         },
       },
     },
@@ -131,13 +153,22 @@ router.get('/orders/:id', validateOrderId, asyncHandler(async (req: Request, res
     items: order.items.map((item: any) => ({
       id: item.id,
       productId: item.productId,
+      productVariantId: item.productVariantId,
       quantity: item.quantity,
       unitPrice: Number(item.unitPrice),
+      selectedColor: item.selectedColor,
+      selectedSize: item.selectedSize,
       product: {
         id: item.product.id,
         name: item.product.name,
         imageUrl: item.product.imageUrl || undefined,
       },
+      productVariant: item.productVariant ? {
+        id: item.productVariant.id,
+        color: item.productVariant.color,
+        size: item.productVariant.size,
+        sku: item.productVariant.sku,
+      } : undefined,
     })),
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
@@ -170,6 +201,15 @@ router.put('/orders/:id/status', validateOrderId, validateUpdateOrderStatus, asy
               status: true,
             },
           },
+          productVariant: {
+            select: {
+              id: true,
+              color: true,
+              size: true,
+              quantity: true,
+              sku: true,
+            },
+          },
         },
       },
     },
@@ -187,31 +227,55 @@ router.put('/orders/:id/status', validateOrderId, validateUpdateOrderStatus, asy
 
   // If updating to paid status, deduct inventory
   if (status === ORDER_STATUS.PAID && existingOrder.status !== ORDER_STATUS.PAID) {
-    // Check if all products have sufficient quantity
+    // Check inventory availability for each item
     for (const item of existingOrder.items) {
-      if (item.product.quantity < item.quantity) {
-        res.status(HTTP_STATUS.BAD_REQUEST).json({
-          success: false,
-          message: 'Insufficient inventory',
-          error: `Product "${item.product.name}" only has ${item.product.quantity} units available, but ${item.quantity} were ordered`,
-          timestamp: new Date().toISOString(),
-        });
-        return;
+      if (item.productVariant) {
+        // Check variant inventory
+        if (item.productVariant.quantity < item.quantity) {
+          res.status(HTTP_STATUS.BAD_REQUEST).json({
+            success: false,
+            message: 'Insufficient inventory',
+            error: `Product "${item.product.name}" in ${item.productVariant.color} ${item.productVariant.size} only has ${item.productVariant.quantity} units available, but ${item.quantity} were ordered`,
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
+      } else {
+        // Check product-level inventory
+        if (item.product.quantity < item.quantity) {
+          res.status(HTTP_STATUS.BAD_REQUEST).json({
+            success: false,
+            message: 'Insufficient inventory',
+            error: `Product "${item.product.name}" only has ${item.product.quantity} units available, but ${item.quantity} were ordered`,
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
       }
     }
 
     // Deduct inventory in a transaction
     await prisma.$transaction(async (tx: any) => {
-      // Update each product's quantity
+      // Update inventory for each item
       for (const item of existingOrder.items) {
-        const newQuantity = item.product.quantity - item.quantity;
-        await tx.product.update({
-          where: { id: item.productId },
-          data: {
-            quantity: newQuantity,
-            status: newQuantity > 0 ? 'available' : 'sold_out',
-          },
-        });
+        if (item.productVariant) {
+          // Deduct from variant inventory
+          const newVariantQuantity = item.productVariant.quantity - item.quantity;
+          await tx.productVariant.update({
+            where: { id: item.productVariant.id },
+            data: { quantity: newVariantQuantity },
+          });
+        } else {
+          // Deduct from product-level inventory
+          const newQuantity = item.product.quantity - item.quantity;
+          await tx.product.update({
+            where: { id: item.productId },
+            data: {
+              quantity: newQuantity,
+              status: newQuantity > 0 ? 'available' : 'sold_out',
+            },
+          });
+        }
       }
 
       // Update order status
@@ -241,6 +305,14 @@ router.put('/orders/:id/status', validateOrderId, validateUpdateOrderStatus, asy
               imageUrl: true,
             },
           },
+          productVariant: {
+            select: {
+              id: true,
+              color: true,
+              size: true,
+              sku: true,
+            },
+          },
         },
       },
     },
@@ -268,13 +340,22 @@ router.put('/orders/:id/status', validateOrderId, validateUpdateOrderStatus, asy
     items: updatedOrder.items.map((item: any) => ({
       id: item.id,
       productId: item.productId,
+      productVariantId: item.productVariantId,
       quantity: item.quantity,
       unitPrice: Number(item.unitPrice),
+      selectedColor: item.selectedColor,
+      selectedSize: item.selectedSize,
       product: {
         id: item.product.id,
         name: item.product.name,
         imageUrl: item.product.imageUrl || undefined,
       },
+      productVariant: item.productVariant ? {
+        id: item.productVariant.id,
+        color: item.productVariant.color,
+        size: item.productVariant.size,
+        sku: item.productVariant.sku,
+      } : undefined,
     })),
     createdAt: updatedOrder.createdAt.toISOString(),
     updatedAt: updatedOrder.updatedAt.toISOString(),
@@ -582,6 +663,10 @@ router.get('/products', validatePagination, asyncHandler(async (req: Request, re
         images: {
           where: { isActive: true },
           orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+        },
+        variants: {
+          where: { isActive: true },
+          orderBy: [{ color: 'asc' }, { size: 'asc' }]
         }
       },
       orderBy: { createdAt: 'desc' },
@@ -594,6 +679,7 @@ router.get('/products', validatePagination, asyncHandler(async (req: Request, re
   const productResponses: ProductResponse[] = products.map((product: any) => {
     const images = product.images.map(mapProductImageToResponse);
     const primaryImage = images.find((img: ProductImageResponse) => img.isPrimary) || images[0];
+    const variants = product.variants.map(mapProductVariantToResponse);
 
     return {
       id: product.id,
@@ -615,6 +701,7 @@ router.get('/products', validatePagination, asyncHandler(async (req: Request, re
       quantity: product.quantity,
       colors: product.colors ? JSON.parse(product.colors) : [],
       sizes: product.sizes ? JSON.parse(product.sizes) : [],
+      variants,
       status: product.status as 'available' | 'sold_out',
       isActive: product.isActive,
       images,
@@ -662,6 +749,10 @@ router.get('/products/:id', validateProductId, asyncHandler(async (req: Request,
       images: {
         where: { isActive: true },
         orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+      },
+      variants: {
+        where: { isActive: true },
+        orderBy: [{ color: 'asc' }, { size: 'asc' }]
       }
     }
   });
@@ -678,6 +769,7 @@ router.get('/products/:id', validateProductId, asyncHandler(async (req: Request,
 
   const images = product.images.map(mapProductImageToResponse);
   const primaryImage = images.find(img => img.isPrimary) || images[0];
+  const variants = product.variants.map(mapProductVariantToResponse);
 
   const productResponse: ProductResponse = {
     id: product.id,
@@ -699,6 +791,7 @@ router.get('/products/:id', validateProductId, asyncHandler(async (req: Request,
     quantity: product.quantity,
     colors: product.colors ? JSON.parse(product.colors) : [],
     sizes: product.sizes ? JSON.parse(product.sizes) : [],
+    variants,
     status: product.status as 'available' | 'sold_out',
     isActive: product.isActive,
     images,
@@ -717,7 +810,7 @@ router.get('/products/:id', validateProductId, asyncHandler(async (req: Request,
 
 // POST /api/admin/products - Create new product
 router.post('/products', validateCreateProduct, asyncHandler(async (req: Request, res: Response<ApiResponse<ProductResponse>>) => {
-  const { name, description, price, imageUrl, categoryId, quantity = 0, colors = [], sizes = [] } = req.body as CreateProductRequest;
+  const { name, description, price, imageUrl, categoryId, quantity = 0, colors = [], sizes = [], variants: requestVariants = [] } = req.body as CreateProductRequest;
   const quantityNum = parseInt(quantity.toString());
 
   // Validate required fields
@@ -730,8 +823,10 @@ router.post('/products', validateCreateProduct, asyncHandler(async (req: Request
     });
   }
 
-  // Create product
-    const product = await prisma.product.create({
+  // Create product and variants in a transaction
+  const product = await prisma.$transaction(async (tx: any) => {
+    // Create the product
+    const newProduct = await tx.product.create({
       data: {
         name,
         description,
@@ -743,6 +838,29 @@ router.post('/products', validateCreateProduct, asyncHandler(async (req: Request
         sizes: JSON.stringify(sizes || []),
         status: quantityNum > 0 ? 'available' : 'sold_out',
       },
+    });
+
+    // Create variants if provided
+    if (requestVariants && requestVariants.length > 0) {
+      for (const variant of requestVariants) {
+        const sku = variant.sku || `${name.toUpperCase().replace(/\s+/g, '-')}-${variant.color.toUpperCase()}-${variant.size.toUpperCase()}`;
+        
+        await tx.productVariant.create({
+          data: {
+            productId: newProduct.id,
+            color: variant.color,
+            size: variant.size,
+            quantity: variant.quantity,
+            sku: sku,
+            isActive: true,
+          },
+        });
+      }
+    }
+
+    // Return the product with all relations
+    return await tx.product.findUnique({
+      where: { id: newProduct.id },
       include: {
         category: {
           select: {
@@ -759,12 +877,18 @@ router.post('/products', validateCreateProduct, asyncHandler(async (req: Request
         images: {
           where: { isActive: true },
           orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+        },
+        variants: {
+          where: { isActive: true },
+          orderBy: [{ color: 'asc' }, { size: 'asc' }]
         }
       }
     });
+  });
 
   const images = product.images.map(mapProductImageToResponse);
-  const primaryImage = images.find(img => img.isPrimary) || images[0];
+  const primaryImage = images.find((img: any) => img.isPrimary) || images[0];
+  const variants = product.variants.map(mapProductVariantToResponse);
 
   const productResponse: ProductResponse = {
     id: product.id,
@@ -786,6 +910,7 @@ router.post('/products', validateCreateProduct, asyncHandler(async (req: Request
     quantity: product.quantity,
     colors: product.colors ? JSON.parse(product.colors) : [],
     sizes: product.sizes ? JSON.parse(product.sizes) : [],
+    variants,
     status: product.status as 'available' | 'sold_out',
     isActive: product.isActive,
     images,
@@ -805,7 +930,7 @@ router.post('/products', validateCreateProduct, asyncHandler(async (req: Request
 // PUT /api/admin/products/:id - Update product
 router.put('/products/:id', validateProductId, validateUpdateProduct, asyncHandler(async (req: Request, res: Response<ApiResponse<ProductResponse>>) => {
   const productId = parseInt(req.params['id']!);
-  const { name, description, price, imageUrl, categoryId, quantity, colors, sizes, isActive } = req.body as UpdateProductRequest;
+  const { name, description, price, imageUrl, categoryId, quantity, colors, sizes, variants: requestVariants, isActive } = req.body as UpdateProductRequest;
 
   // Check if product exists
   const existingProduct = await prisma.product.findUnique({
@@ -837,32 +962,69 @@ router.put('/products/:id', validateProductId, validateUpdateProduct, asyncHandl
   }
   if (isActive !== undefined) updateData.isActive = isActive;
 
-  // Update product
-  const updatedProduct = await prisma.product.update({
-    where: { id: productId },
-    data: updateData,
-    include: {
-      category: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          description: true,
-          isActive: true,
-          sortOrder: true,
-          createdAt: true,
-          updatedAt: true
-        }
-      },
-      images: {
-        where: { isActive: true },
-        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+  // Update product and variants in a transaction
+  const updatedProduct = await prisma.$transaction(async (tx: any) => {
+    // Update the product
+    const product = await tx.product.update({
+      where: { id: productId },
+      data: updateData,
+    });
+
+    // Handle variants if provided
+    if (requestVariants !== undefined) {
+      // Delete existing variants
+      await tx.productVariant.deleteMany({
+        where: { productId: productId }
+      });
+
+      // Create new variants (even if empty array - this clears all variants)
+      for (const variant of requestVariants) {
+        const sku = variant.sku || `${product.name.toUpperCase().replace(/\s+/g, '-')}-${variant.color.toUpperCase()}-${variant.size.toUpperCase()}`;
+        
+        await tx.productVariant.create({
+          data: {
+            productId: productId,
+            color: variant.color,
+            size: variant.size,
+            quantity: variant.quantity,
+            sku: sku,
+            isActive: true,
+          },
+        });
       }
     }
+
+    // Return the updated product with all relations
+    return await tx.product.findUnique({
+      where: { id: productId },
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            isActive: true,
+            sortOrder: true,
+            createdAt: true,
+            updatedAt: true
+          }
+        },
+        images: {
+          where: { isActive: true },
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+        },
+        variants: {
+          where: { isActive: true },
+          orderBy: [{ color: 'asc' }, { size: 'asc' }]
+        }
+      }
+    });
   });
 
   const images = updatedProduct.images.map(mapProductImageToResponse);
-  const primaryImage = images.find(img => img.isPrimary) || images[0];
+  const primaryImage = images.find((img: any) => img.isPrimary) || images[0];
+  const variants = updatedProduct.variants.map(mapProductVariantToResponse);
 
   const productResponse: ProductResponse = {
     id: updatedProduct.id,
@@ -884,6 +1046,7 @@ router.put('/products/:id', validateProductId, validateUpdateProduct, asyncHandl
     quantity: updatedProduct.quantity,
     colors: updatedProduct.colors ? JSON.parse(updatedProduct.colors) : [],
     sizes: updatedProduct.sizes ? JSON.parse(updatedProduct.sizes) : [],
+    variants,
     status: updatedProduct.status as 'available' | 'sold_out',
     isActive: updatedProduct.isActive,
     images,

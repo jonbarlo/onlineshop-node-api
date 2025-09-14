@@ -1,5 +1,6 @@
 import { CategoryResponse } from './category';
 import { ProductImageResponse } from './productImage';
+import { ProductVariantResponse } from './productVariant';
 
 // Product Entity Types
 export interface Product {
@@ -28,6 +29,12 @@ export interface CreateProductRequest {
   quantity?: number;
   colors?: string[];
   sizes?: string[];
+  variants?: {
+    color: string;
+    size: string;
+    quantity: number;
+    sku?: string;
+  }[];
 }
 
 export interface UpdateProductRequest {
@@ -39,6 +46,12 @@ export interface UpdateProductRequest {
   quantity?: number;
   colors?: string[];
   sizes?: string[];
+  variants?: {
+    color: string;
+    size: string;
+    quantity: number;
+    sku?: string;
+  }[];
   isActive?: boolean;
 }
 
@@ -51,9 +64,10 @@ export interface ProductResponse {
   imageUrl?: string; // Deprecated - kept for backward compatibility
   categoryId: number | null;
   category: CategoryResponse | null;
-  quantity: number;
+  quantity: number; // Deprecated - kept for backward compatibility
   colors: string[];
   sizes: string[];
+  variants: ProductVariantResponse[];
   status: 'available' | 'sold_out';
   isActive: boolean;
   images: ProductImageResponse[];
@@ -69,9 +83,10 @@ export interface ProductSummary {
   imageUrl?: string; // Deprecated - kept for backward compatibility
   categoryId: number | null;
   category: CategoryResponse | null;
-  quantity: number;
+  quantity: number; // Deprecated - kept for backward compatibility
   colors: string[];
   sizes: string[];
+  variants: ProductVariantResponse[];
   status: 'available' | 'sold_out';
   primaryImage?: ProductImageResponse | undefined;
 }

@@ -104,3 +104,51 @@ Content-Type: application/json
     }
   ]
 }
+
+### Create Order with Variants (Color/Size Selection)
+POST http://localhost:3000/api/orders
+Content-Type: application/json
+
+{
+  "customerName": "Sarah Johnson",
+  "customerEmail": "sarah.johnson@example.com",
+  "customerPhone": "+1777888999",
+  "deliveryAddress": "987 Cedar Lane, Boston, MA 02101",
+  "items": [
+    {
+      "productId": 1,
+      "selectedColor": "Blue",
+      "selectedSize": "M",
+      "quantity": 2
+    },
+    {
+      "productId": 1,
+      "selectedColor": "Red",
+      "selectedSize": "L",
+      "quantity": 1
+    }
+  ]
+}
+
+### Create Order with Mixed Variants and Regular Items
+POST http://localhost:3000/api/orders
+Content-Type: application/json
+
+{
+  "customerName": "Mike Davis",
+  "customerEmail": "mike.davis@example.com",
+  "customerPhone": "+1666777888",
+  "deliveryAddress": "555 Birch Street, Denver, CO 80201",
+  "items": [
+    {
+      "productId": 1,
+      "selectedColor": "Blue",
+      "selectedSize": "S",
+      "quantity": 1
+    },
+    {
+      "productId": 2,
+      "quantity": 3
+    }
+  ]
+}

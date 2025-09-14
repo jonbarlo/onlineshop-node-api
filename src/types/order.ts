@@ -11,13 +11,22 @@ export const ORDER_STATUS = {
 export interface OrderItem {
   id: number;
   productId: number;
+  productVariantId?: number;
   quantity: number;
   unitPrice: number;
+  selectedColor?: string;
+  selectedSize?: string;
   product?: {
     id: number;
     name: string;
     imageUrl?: string;
   };
+  productVariant?: {
+    id: number;
+    color: string;
+    size: string;
+    sku: string;
+  } | undefined;
 }
 
 // Order Entity Types
@@ -43,6 +52,8 @@ export interface CreateOrderRequest {
   deliveryAddress: string;
   items: {
     productId: number;
+    selectedColor?: string;
+    selectedSize?: string;
     quantity: number;
   }[];
 }

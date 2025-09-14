@@ -23,8 +23,17 @@ GET http://localhost:3000/api/products?categorySlug=electronics
 ### Get Products with Price Range
 GET http://localhost:3000/api/products?minPrice=10&maxPrice=100
 
-### Get Products with Multiple Filters
-GET http://localhost:3000/api/products?categoryId=1&minPrice=20&maxPrice=50&search=Sample
+### Get Products with Color Filter
+GET http://localhost:3000/api/products?colors=Blue,Red
+
+### Get Products with Size Filter
+GET http://localhost:3000/api/products?sizes=S,M,L
+
+### Get Products with Color and Size Filters
+GET http://localhost:3000/api/products?colors=Blue&sizes=M
+
+### Get Products with Multiple Filters (including variants)
+GET http://localhost:3000/api/products?categoryId=1&minPrice=20&maxPrice=50&search=Sample&colors=Blue&sizes=M
 
 ### ==========================================
 ### PRODUCT DETAILS

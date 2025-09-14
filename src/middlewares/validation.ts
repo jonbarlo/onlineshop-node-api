@@ -100,6 +100,29 @@ export const validateCreateProduct = [
     .trim()
     .isLength({ max: 20 })
     .withMessage('Each size must not exceed 20 characters'),
+  body('variants')
+    .optional()
+    .isArray()
+    .withMessage('Variants must be an array of objects'),
+  body('variants.*.color')
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Variant color must be between 1 and 50 characters'),
+  body('variants.*.size')
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 20 })
+    .withMessage('Variant size must be between 1 and 20 characters'),
+  body('variants.*.quantity')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Variant quantity must be a non-negative integer'),
+  body('variants.*.sku')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Variant SKU must not exceed 100 characters'),
   body('isActive')
     .optional()
     .isBoolean()
@@ -152,6 +175,29 @@ export const validateUpdateProduct = [
     .trim()
     .isLength({ max: 20 })
     .withMessage('Each size must not exceed 20 characters'),
+  body('variants')
+    .optional()
+    .isArray()
+    .withMessage('Variants must be an array of objects'),
+  body('variants.*.color')
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Variant color must be between 1 and 50 characters'),
+  body('variants.*.size')
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 20 })
+    .withMessage('Variant size must be between 1 and 20 characters'),
+  body('variants.*.quantity')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Variant quantity must be a non-negative integer'),
+  body('variants.*.sku')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Variant SKU must not exceed 100 characters'),
   body('isActive')
     .optional()
     .isBoolean()
@@ -192,6 +238,16 @@ export const validateCreateOrder = [
   body('items.*.productId')
     .isInt({ min: 1 })
     .withMessage('Product ID must be a positive integer'),
+  body('items.*.selectedColor')
+    .optional()
+    .isString()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Selected color must be a string between 1 and 50 characters'),
+  body('items.*.selectedSize')
+    .optional()
+    .isString()
+    .isLength({ min: 1, max: 20 })
+    .withMessage('Selected size must be a string between 1 and 20 characters'),
   body('items.*.quantity')
     .isInt({ min: 1 })
     .withMessage('Quantity must be a positive integer'),
