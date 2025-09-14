@@ -82,6 +82,16 @@ export const validateCreateProduct = [
     .optional()
     .isInt({ min: 0 })
     .withMessage('Quantity must be a non-negative integer'),
+  body('color')
+    .optional()
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage('Color must not exceed 50 characters'),
+  body('size')
+    .optional()
+    .trim()
+    .isLength({ max: 20 })
+    .withMessage('Size must not exceed 20 characters'),
   body('isActive')
     .optional()
     .isBoolean()
@@ -116,6 +126,16 @@ export const validateUpdateProduct = [
     .optional()
     .isInt({ min: 0 })
     .withMessage('Quantity must be a non-negative integer'),
+  body('color')
+    .optional()
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage('Color must not exceed 50 characters'),
+  body('size')
+    .optional()
+    .trim()
+    .isLength({ max: 20 })
+    .withMessage('Size must not exceed 20 characters'),
   body('isActive')
     .optional()
     .isBoolean()
@@ -194,5 +214,72 @@ export const validateOrderStatusFilter = [
     .optional()
     .isIn(['new', 'paid', 'ready_for_delivery'])
     .withMessage('Status must be one of: new, paid, ready_for_delivery'),
+  handleValidationErrors,
+];
+
+// Product Image validation rules
+export const validateCreateProductImage = [
+  body('imageUrl')
+    .trim()
+    .notEmpty()
+    .withMessage('Image URL is required')
+    .isURL({ protocols: ['http', 'https'] })
+    .withMessage('Image URL must be a valid HTTP or HTTPS URL')
+    .isLength({ max: 500 })
+    .withMessage('Image URL must not exceed 500 characters'),
+  body('altText')
+    .optional()
+    .trim()
+    .isLength({ max: 255 })
+    .withMessage('Alt text must not exceed 255 characters'),
+  body('sortOrder')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Sort order must be a non-negative integer'),
+  body('isPrimary')
+    .optional()
+    .isBoolean()
+    .withMessage('isPrimary must be a boolean'),
+  handleValidationErrors,
+];
+
+export const validateUpdateProductImage = [
+  body('altText')
+    .optional()
+    .trim()
+    .isLength({ max: 255 })
+    .withMessage('Alt text must not exceed 255 characters'),
+  body('sortOrder')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Sort order must be a non-negative integer'),
+  body('isPrimary')
+    .optional()
+    .isBoolean()
+    .withMessage('isPrimary must be a boolean'),
+  body('isActive')
+    .optional()
+    .isBoolean()
+    .withMessage('isActive must be a boolean'),
+  handleValidationErrors,
+];
+
+export const validateReorderImages = [
+  body('imageIds')
+    .isArray({ min: 1 })
+    .withMessage('imageIds must be a non-empty array')
+    .custom((value: any[]) => {
+      if (!value.every(id => Number.isInteger(id) && id > 0)) {
+        throw new Error('All image IDs must be positive integers');
+      }
+      return true;
+    }),
+  handleValidationErrors,
+];
+
+export const validateImageId = [
+  param('imageId')
+    .isInt({ min: 1 })
+    .withMessage('Image ID must be a positive integer'),
   handleValidationErrors,
 ];

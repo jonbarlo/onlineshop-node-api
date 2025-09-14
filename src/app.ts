@@ -27,6 +27,7 @@ import logger from './utils/logger';
 // Import routes
 import authRoutes from './api/auth';
 import productRoutes from './api/products';
+import productImageRoutes from './api/productImages';
 import categoryRoutes from './api/categories';
 import orderRoutes from './api/orders';
 import adminRoutes from './api/admin';
@@ -90,6 +91,7 @@ app.get('/health', (_req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api', productImageRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);

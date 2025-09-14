@@ -35,7 +35,7 @@ Content-Type: application/json
 ### 3. PUBLIC PRODUCT ENDPOINTS
 ### ===========================================
 
-### Get All Products
+### Get All Products (now includes images and primaryImage)
 GET {{baseUrl}}/api/products
 
 ### Get Products with Pagination
@@ -44,8 +44,14 @@ GET {{baseUrl}}/api/products?page=1&limit=2
 ### Get Products with Search
 GET {{baseUrl}}/api/products?search=Sample
 
-### Get Product by ID
+### Get Products by Category
+GET {{baseUrl}}/api/products?categoryId=1
+
+### Get Product by ID (now includes images and primaryImage)
 GET {{baseUrl}}/api/products/1
+
+### Get Product Images (Public)
+GET {{baseUrl}}/api/products/1/images
 
 ### ===========================================
 ### 4. ORDER CREATION
@@ -105,27 +111,33 @@ Content-Type: application/json
 GET {{baseUrl}}/api/admin/dashboard
 Authorization: Bearer {{token}}
 
-### Get All Products (Admin)
+### Get All Products (Admin - now includes images and primaryImage)
 GET {{baseUrl}}/api/admin/products
 Authorization: Bearer {{token}}
 
-### Create New Product
+### Get Product by ID (Admin - includes inactive/sold out)
+GET {{baseUrl}}/api/admin/products/1
+Authorization: Bearer {{token}}
+
+### Create New Product (now includes categoryId and quantity)
 # @name createProduct
 POST {{baseUrl}}/api/admin/products
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "name": "API Test Product",
-  "description": "Product created via API test",
+  "name": "API Test Product with Images",
+  "description": "Product created via API test with support for multiple images",
   "price": 25.99,
-  "imageUrl": "https://via.placeholder.com/300x300?text=API+Test"
+  "imageUrl": "https://via.placeholder.com/300x300?text=API+Test",
+  "categoryId": 1,
+  "quantity": 10
 }
 
 ### Set product ID
 @productId = {{createProduct.response.body.data.id}}
 
-### Update Product
+### Update Product (now includes categoryId and quantity)
 PUT {{baseUrl}}/api/admin/products/{{productId}}
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -133,10 +145,74 @@ Content-Type: application/json
 {
   "name": "Updated API Test Product",
   "description": "Updated description",
-  "price": 29.99
+  "price": 29.99,
+  "categoryId": 1,
+  "quantity": 15
 }
 
-### Delete Product
+### ===========================================
+### PRODUCT IMAGES MANAGEMENT (Admin)
+### ===========================================
+
+### List Product Images (Admin)
+GET {{baseUrl}}/api/admin/products/{{productId}}/images
+Authorization: Bearer {{token}}
+
+### Add First Image to Product
+POST {{baseUrl}}/api/admin/products/{{productId}}/images
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "imageUrl": "https://picsum.photos/400/400?random=1",
+  "altText": "Product front view",
+  "sortOrder": 0,
+  "isPrimary": true
+}
+
+### Add Second Image to Product
+POST {{baseUrl}}/api/admin/products/{{productId}}/images
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "imageUrl": "https://picsum.photos/400/400?random=2",
+  "altText": "Product side view",
+  "sortOrder": 1,
+  "isPrimary": false
+}
+
+### Add Third Image to Product
+POST {{baseUrl}}/api/admin/products/{{productId}}/images
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "imageUrl": "https://picsum.photos/400/400?random=3",
+  "altText": "Product back view",
+  "sortOrder": 2,
+  "isPrimary": false
+}
+
+### Reorder Images
+PUT {{baseUrl}}/api/admin/products/{{productId}}/images/reorder
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "imageIds": [2, 1, 3]
+}
+
+### Update Image (Set as Primary)
+PUT {{baseUrl}}/api/admin/products/{{productId}}/images/2
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "isPrimary": true
+}
+
+### Delete Product (Soft Delete)
 DELETE {{baseUrl}}/api/admin/products/{{productId}}
 Authorization: Bearer {{token}}
 

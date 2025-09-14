@@ -22,6 +22,8 @@ This folder contains HTTP test files for testing all SimpleShop API endpoints. T
 - Public product endpoint tests
 - Product listing with pagination and search
 - Individual product retrieval
+- Product images endpoint tests
+- Response structure examples with new image fields
 
 ### `orders.http`
 - Order creation tests
@@ -31,9 +33,17 @@ This folder contains HTTP test files for testing all SimpleShop API endpoints. T
 ### `admin.http`
 - Admin endpoint tests (requires authentication)
 - Order management operations
-- Product management operations
+- Product management operations (now includes quantity and category support)
 - Dashboard statistics
 - Authorization tests
+
+### `product-images.http`
+- Product image management tests (Admin)
+- Image CRUD operations
+- Image reordering functionality
+- Primary image management
+- Validation and error testing
+- Bulk operations testing
 
 ### `all-endpoints.http`
 - Complete test suite with all endpoints
@@ -59,10 +69,11 @@ This folder contains HTTP test files for testing all SimpleShop API endpoints. T
 
 1. **Start with `health.http`** - Verify API is running
 2. **Run `auth.http`** - Get authentication token
-3. **Test `products.http`** - Verify product endpoints
+3. **Test `products.http`** - Verify product endpoints (now includes images)
 4. **Create orders with `orders.http`** - Test order creation
-5. **Use `admin.http`** - Test admin functionality
-6. **Run `all-endpoints.http`** - Complete test suite
+5. **Use `admin.http`** - Test admin functionality (now includes quantity/category support)
+6. **Test `product-images.http`** - Test multiple images functionality
+7. **Run `all-endpoints.http`** - Complete test suite with all new features
 
 ## Authentication
 

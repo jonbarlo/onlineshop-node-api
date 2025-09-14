@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../config/database';
 import { OrderResponse, OrderSummary, OrderStatus, UpdateOrderStatusRequest, ORDER_STATUS } from '../types/order';
 import { ProductResponse, CreateProductRequest, UpdateProductRequest } from '../types/product';
+import { ProductImageResponse } from '../types/productImage';
 import { CategoryResponse, CreateCategoryRequest, UpdateCategoryRequest } from '../types/category';
 import { ApiResponse, PaginatedResponse } from '../types/api';
 import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from '../utils/constants';
@@ -10,6 +11,19 @@ import { authenticateToken, requireAdmin } from '../middlewares/auth';
 import { validateOrderId, validateUpdateOrderStatus, validatePagination, validateOrderStatusFilter, validateProductId, validateCreateProduct, validateUpdateProduct } from '../middlewares/validation';
 
 const router = Router();
+
+// Helper function to map ProductImage to ProductImageResponse
+const mapProductImageToResponse = (image: any): ProductImageResponse => ({
+  id: image.id,
+  productId: image.productId,
+  imageUrl: image.imageUrl,
+  altText: image.altText,
+  sortOrder: image.sortOrder,
+  isPrimary: image.isPrimary,
+  isActive: image.isActive,
+  createdAt: image.createdAt.toISOString(),
+  updatedAt: image.updatedAt.toISOString(),
+});
 
 // Apply authentication and admin middleware to all routes
 router.use(authenticateToken);
@@ -564,6 +578,10 @@ router.get('/products', validatePagination, asyncHandler(async (req: Request, re
             createdAt: true,
             updatedAt: true
           }
+        },
+        images: {
+          where: { isActive: true },
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
         }
       },
       orderBy: { createdAt: 'desc' },
@@ -573,29 +591,38 @@ router.get('/products', validatePagination, asyncHandler(async (req: Request, re
     prisma.product.count({ where }),
   ]);
 
-  const productResponses: ProductResponse[] = products.map((product: any) => ({
-    id: product.id,
-    name: product.name,
-    description: product.description,
-    price: Number(product.price),
-    imageUrl: product.imageUrl || undefined,
-    categoryId: product.categoryId,
-    category: product.category ? {
-      id: product.category.id,
-      name: product.category.name,
-      description: product.category.description,
-      slug: product.category.slug,
-      isActive: product.category.isActive,
-      sortOrder: product.category.sortOrder,
-      createdAt: product.category.createdAt.toISOString(),
-      updatedAt: product.category.updatedAt.toISOString(),
-    } : null,
-    quantity: product.quantity,
-    status: product.status as 'available' | 'sold_out',
-    isActive: product.isActive,
-    createdAt: product.createdAt.toISOString(),
-    updatedAt: product.updatedAt.toISOString(),
-  }));
+  const productResponses: ProductResponse[] = products.map((product: any) => {
+    const images = product.images.map(mapProductImageToResponse);
+    const primaryImage = images.find((img: ProductImageResponse) => img.isPrimary) || images[0];
+
+    return {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: Number(product.price),
+      imageUrl: product.imageUrl || undefined, // Deprecated - kept for backward compatibility
+      categoryId: product.categoryId,
+      category: product.category ? {
+        id: product.category.id,
+        name: product.category.name,
+        description: product.category.description,
+        slug: product.category.slug,
+        isActive: product.category.isActive,
+        sortOrder: product.category.sortOrder,
+        createdAt: product.category.createdAt.toISOString(),
+        updatedAt: product.category.updatedAt.toISOString(),
+      } : null,
+      quantity: product.quantity,
+      ...(product.color && { color: product.color }),
+      ...(product.size && { size: product.size }),
+      status: product.status as 'available' | 'sold_out',
+      isActive: product.isActive,
+      images,
+      primaryImage,
+      createdAt: product.createdAt.toISOString(),
+      updatedAt: product.updatedAt.toISOString(),
+    };
+  });
 
   const totalPages = Math.ceil(total / limit);
 
@@ -631,6 +658,10 @@ router.get('/products/:id', validateProductId, asyncHandler(async (req: Request,
           createdAt: true,
           updatedAt: true
         }
+      },
+      images: {
+        where: { isActive: true },
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
       }
     }
   });
@@ -645,12 +676,15 @@ router.get('/products/:id', validateProductId, asyncHandler(async (req: Request,
     return;
   }
 
+  const images = product.images.map(mapProductImageToResponse);
+  const primaryImage = images.find(img => img.isPrimary) || images[0];
+
   const productResponse: ProductResponse = {
     id: product.id,
     name: product.name,
     description: product.description,
     price: Number(product.price),
-    ...(product.imageUrl && { imageUrl: product.imageUrl }),
+    ...(product.imageUrl && { imageUrl: product.imageUrl }), // Deprecated - kept for backward compatibility
     categoryId: product.categoryId,
     category: product.category ? {
       id: product.category.id,
@@ -663,8 +697,12 @@ router.get('/products/:id', validateProductId, asyncHandler(async (req: Request,
       updatedAt: product.category.updatedAt.toISOString(),
     } : null,
     quantity: product.quantity,
+    ...(product.color && { color: product.color }),
+    ...(product.size && { size: product.size }),
     status: product.status as 'available' | 'sold_out',
     isActive: product.isActive,
+    images,
+    primaryImage,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
   };
@@ -679,7 +717,7 @@ router.get('/products/:id', validateProductId, asyncHandler(async (req: Request,
 
 // POST /api/admin/products - Create new product
 router.post('/products', validateCreateProduct, asyncHandler(async (req: Request, res: Response<ApiResponse<ProductResponse>>) => {
-  const { name, description, price, imageUrl, categoryId, quantity = 0 } = req.body as CreateProductRequest;
+  const { name, description, price, imageUrl, categoryId, quantity = 0, color, size } = req.body as CreateProductRequest;
   const quantityNum = parseInt(quantity.toString());
 
   // Validate required fields
@@ -701,6 +739,8 @@ router.post('/products', validateCreateProduct, asyncHandler(async (req: Request
         imageUrl: imageUrl || null,
         categoryId: categoryId || null,
         quantity: quantityNum,
+        color: color || null,
+        size: size || null,
         status: quantityNum > 0 ? 'available' : 'sold_out',
       },
       include: {
@@ -715,16 +755,23 @@ router.post('/products', validateCreateProduct, asyncHandler(async (req: Request
             createdAt: true,
             updatedAt: true
           }
+        },
+        images: {
+          where: { isActive: true },
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
         }
       }
     });
+
+  const images = product.images.map(mapProductImageToResponse);
+  const primaryImage = images.find(img => img.isPrimary) || images[0];
 
   const productResponse: ProductResponse = {
     id: product.id,
     name: product.name,
     description: product.description,
     price: Number(product.price),
-    ...(product.imageUrl && { imageUrl: product.imageUrl }),
+    ...(product.imageUrl && { imageUrl: product.imageUrl }), // Deprecated - kept for backward compatibility
     categoryId: product.categoryId,
     category: product.category ? {
       id: product.category.id,
@@ -737,8 +784,12 @@ router.post('/products', validateCreateProduct, asyncHandler(async (req: Request
       updatedAt: product.category.updatedAt.toISOString(),
     } : null,
     quantity: product.quantity,
+    ...(product.color && { color: product.color }),
+    ...(product.size && { size: product.size }),
     status: product.status as 'available' | 'sold_out',
     isActive: product.isActive,
+    images,
+    primaryImage,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
   };
@@ -754,7 +805,7 @@ router.post('/products', validateCreateProduct, asyncHandler(async (req: Request
 // PUT /api/admin/products/:id - Update product
 router.put('/products/:id', validateProductId, validateUpdateProduct, asyncHandler(async (req: Request, res: Response<ApiResponse<ProductResponse>>) => {
   const productId = parseInt(req.params['id']!);
-  const { name, description, price, imageUrl, categoryId, quantity, isActive } = req.body as UpdateProductRequest;
+  const { name, description, price, imageUrl, categoryId, quantity, color, size, isActive } = req.body as UpdateProductRequest;
 
   // Check if product exists
   const existingProduct = await prisma.product.findUnique({
@@ -777,6 +828,8 @@ router.put('/products/:id', validateProductId, validateUpdateProduct, asyncHandl
   if (price !== undefined) updateData.price = price;
   if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
   if (categoryId !== undefined) updateData.categoryId = categoryId;
+  if (color !== undefined) updateData.color = color;
+  if (size !== undefined) updateData.size = size;
   if (quantity !== undefined) {
     updateData.quantity = parseInt(quantity.toString());
     // Update status based on quantity
@@ -800,16 +853,23 @@ router.put('/products/:id', validateProductId, validateUpdateProduct, asyncHandl
           createdAt: true,
           updatedAt: true
         }
+      },
+      images: {
+        where: { isActive: true },
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
       }
     }
   });
+
+  const images = updatedProduct.images.map(mapProductImageToResponse);
+  const primaryImage = images.find(img => img.isPrimary) || images[0];
 
   const productResponse: ProductResponse = {
     id: updatedProduct.id,
     name: updatedProduct.name,
     description: updatedProduct.description,
     price: Number(updatedProduct.price),
-    ...(updatedProduct.imageUrl && { imageUrl: updatedProduct.imageUrl }),
+    ...(updatedProduct.imageUrl && { imageUrl: updatedProduct.imageUrl }), // Deprecated - kept for backward compatibility
     categoryId: updatedProduct.categoryId,
     category: updatedProduct.category ? {
       id: updatedProduct.category.id,
@@ -822,8 +882,12 @@ router.put('/products/:id', validateProductId, validateUpdateProduct, asyncHandl
       updatedAt: updatedProduct.category.updatedAt.toISOString(),
     } : null,
     quantity: updatedProduct.quantity,
+    ...(updatedProduct.color && { color: updatedProduct.color }),
+    ...(updatedProduct.size && { size: updatedProduct.size }),
     status: updatedProduct.status as 'available' | 'sold_out',
     isActive: updatedProduct.isActive,
+    images,
+    primaryImage,
     createdAt: updatedProduct.createdAt.toISOString(),
     updatedAt: updatedProduct.updatedAt.toISOString(),
   };

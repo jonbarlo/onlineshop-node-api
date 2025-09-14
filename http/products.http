@@ -1,7 +1,11 @@
 ### SimpleShop API - Product Tests
 ### Base URL: http://localhost:3000
 
-### Get All Products
+### ==========================================
+### PRODUCT LISTING AND SEARCH
+### ==========================================
+
+### Get All Products (now includes images and primaryImage)
 GET http://localhost:3000/api/products
 
 ### Get All Products with Pagination
@@ -10,7 +14,23 @@ GET http://localhost:3000/api/products?page=1&limit=2
 ### Get All Products with Search
 GET http://localhost:3000/api/products?search=Sample
 
-### Get Product by ID
+### Get Products by Category ID
+GET http://localhost:3000/api/products?categoryId=1
+
+### Get Products by Category Slug
+GET http://localhost:3000/api/products?categorySlug=electronics
+
+### Get Products with Price Range
+GET http://localhost:3000/api/products?minPrice=10&maxPrice=100
+
+### Get Products with Multiple Filters
+GET http://localhost:3000/api/products?categoryId=1&minPrice=20&maxPrice=50&search=Sample
+
+### ==========================================
+### PRODUCT DETAILS
+### ==========================================
+
+### Get Product by ID (now includes images array and primaryImage)
 GET http://localhost:3000/api/products/1
 
 ### Get Product by ID (Non-existent)
@@ -18,3 +38,81 @@ GET http://localhost:3000/api/products/999
 
 ### Get Product by ID (Invalid ID)
 GET http://localhost:3000/api/products/invalid
+
+### Get Product by ID (Inactive Product - should return 404)
+GET http://localhost:3000/api/products/5
+
+### ==========================================
+### PRODUCT IMAGES
+### ==========================================
+
+### Get Product Images (Public)
+GET http://localhost:3000/api/products/1/images
+
+### Get Product Images for Non-existent Product
+GET http://localhost:3000/api/products/999/images
+
+### Get Product Images for Inactive Product
+GET http://localhost:3000/api/products/5/images
+
+### ==========================================
+### PRODUCT SUMMARIES
+### ==========================================
+
+### Get Product Summaries (for cart/quick view - now includes primaryImage)
+GET http://localhost:3000/api/products/summary/list
+
+### ==========================================
+### RESPONSE STRUCTURE EXAMPLES
+### ==========================================
+
+### Example Product Response Structure:
+### {
+###   "success": true,
+###   "message": "Operation completed successfully",
+###   "data": {
+###     "id": 1,
+###     "name": "Sample Product",
+###     "description": "Product description",
+###     "price": 29.99,
+###     "imageUrl": "https://example.com/old-image.jpg", // Deprecated
+###     "categoryId": 1,
+###     "category": { ... },
+###     "quantity": 10,
+###     "status": "available",
+###     "isActive": true,
+###     "images": [
+###       {
+###         "id": 1,
+###         "productId": 1,
+###         "imageUrl": "https://example.com/image1.jpg",
+###         "altText": "Product front view",
+###         "sortOrder": 0,
+###         "isPrimary": true,
+###         "isActive": true,
+###         "createdAt": "2024-01-01T00:00:00.000Z",
+###         "updatedAt": "2024-01-01T00:00:00.000Z"
+###       }
+###     ],
+###     "primaryImage": { ... }, // Same structure as image object
+###     "createdAt": "2024-01-01T00:00:00.000Z",
+###     "updatedAt": "2024-01-01T00:00:00.000Z"
+###   },
+###   "timestamp": "2024-01-01T00:00:00.000Z"
+### }
+
+### Example Product Images Response Structure:
+### {
+###   "success": true,
+###   "message": "Operation completed successfully",
+###   "data": {
+###     "totalImages": 3,
+###     "primaryImage": { ... },
+###     "images": [
+###       { ... }, // Image objects ordered by sortOrder, then createdAt
+###       { ... },
+###       { ... }
+###     ]
+###   },
+###   "timestamp": "2024-01-01T00:00:00.000Z"
+### }

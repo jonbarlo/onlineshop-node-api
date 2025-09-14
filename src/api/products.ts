@@ -1,12 +1,26 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../config/database';
 import { ProductResponse, ProductSummary } from '../types/product';
+import { ProductImageResponse } from '../types/productImage';
 import { ApiResponse } from '../types/api';
 import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from '../utils/constants';
 import { asyncHandler } from '../middlewares/error';
 import { validateProductId, validatePagination } from '../middlewares/validation';
 
 const router = Router();
+
+// Helper function to map ProductImage to ProductImageResponse
+const mapProductImageToResponse = (image: any): ProductImageResponse => ({
+  id: image.id,
+  productId: image.productId,
+  imageUrl: image.imageUrl,
+  altText: image.altText,
+  sortOrder: image.sortOrder,
+  isPrimary: image.isPrimary,
+  isActive: image.isActive,
+  createdAt: image.createdAt.toISOString(),
+  updatedAt: image.updatedAt.toISOString(),
+});
 
 // GET /api/products - List all active products with filtering
 router.get('/', validatePagination, asyncHandler(async (req: Request, res: Response<ApiResponse<ProductResponse[]>>) => {
@@ -20,6 +34,8 @@ router.get('/', validatePagination, asyncHandler(async (req: Request, res: Respo
   const minPrice = req.query['minPrice'] ? parseFloat(req.query['minPrice'] as string) : undefined;
   const maxPrice = req.query['maxPrice'] ? parseFloat(req.query['maxPrice'] as string) : undefined;
   const search = req.query['search'] as string | undefined;
+  const color = req.query['color'] as string | undefined;
+  const size = req.query['size'] as string | undefined;
 
   // Build where clause
   const where: any = { 
@@ -51,7 +67,15 @@ router.get('/', validatePagination, asyncHandler(async (req: Request, res: Respo
     ];
   }
 
-  // Get products with pagination and category information
+  if (color) {
+    where.color = { contains: color, mode: 'insensitive' };
+  }
+
+  if (size) {
+    where.size = { contains: size, mode: 'insensitive' };
+  }
+
+  // Get products with pagination, category information, and images
   const products = await prisma.product.findMany({
     where,
     include: {
@@ -66,6 +90,10 @@ router.get('/', validatePagination, asyncHandler(async (req: Request, res: Respo
           createdAt: true,
           updatedAt: true
         }
+      },
+      images: {
+        where: { isActive: true },
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
       }
     },
     orderBy: { createdAt: 'desc' },
@@ -73,29 +101,38 @@ router.get('/', validatePagination, asyncHandler(async (req: Request, res: Respo
     take: limit,
   });
 
-  const productResponses: ProductResponse[] = products.map((product: any) => ({
-    id: product.id,
-    name: product.name,
-    description: product.description,
-    price: Number(product.price),
-    imageUrl: product.imageUrl || undefined,
-    categoryId: product.categoryId,
-    category: product.category ? {
-      id: product.category.id,
-      name: product.category.name,
-      description: product.category.description,
-      slug: product.category.slug,
-      isActive: product.category.isActive,
-      sortOrder: product.category.sortOrder,
-      createdAt: product.category.createdAt.toISOString(),
-      updatedAt: product.category.updatedAt.toISOString(),
-    } : null,
-    quantity: product.quantity,
-    status: product.status as 'available' | 'sold_out',
-    isActive: product.isActive,
-    createdAt: product.createdAt.toISOString(),
-    updatedAt: product.updatedAt.toISOString(),
-  }));
+  const productResponses: ProductResponse[] = products.map((product: any) => {
+    const images = product.images.map(mapProductImageToResponse);
+    const primaryImage = images.find((img: ProductImageResponse) => img.isPrimary) || images[0];
+
+    return {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: Number(product.price),
+      imageUrl: product.imageUrl || undefined, // Deprecated - kept for backward compatibility
+      categoryId: product.categoryId,
+      category: product.category ? {
+        id: product.category.id,
+        name: product.category.name,
+        description: product.category.description,
+        slug: product.category.slug,
+        isActive: product.category.isActive,
+        sortOrder: product.category.sortOrder,
+        createdAt: product.category.createdAt.toISOString(),
+        updatedAt: product.category.updatedAt.toISOString(),
+      } : null,
+      quantity: product.quantity,
+      ...(product.color && { color: product.color }),
+      ...(product.size && { size: product.size }),
+      status: product.status as 'available' | 'sold_out',
+      isActive: product.isActive,
+      images,
+      primaryImage,
+      createdAt: product.createdAt.toISOString(),
+      updatedAt: product.updatedAt.toISOString(),
+    };
+  });
 
   res.status(HTTP_STATUS.OK).json({
     success: true,
@@ -127,6 +164,10 @@ router.get('/:id', validateProductId, asyncHandler(async (req: Request, res: Res
           createdAt: true,
           updatedAt: true
         }
+      },
+      images: {
+        where: { isActive: true },
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
       }
     },
   });
@@ -141,12 +182,15 @@ router.get('/:id', validateProductId, asyncHandler(async (req: Request, res: Res
     return;
   }
 
+  const images = product.images.map(mapProductImageToResponse);
+  const primaryImage = images.find(img => img.isPrimary) || images[0];
+
   const productResponse: ProductResponse = {
     id: product.id,
     name: product.name,
     description: product.description,
     price: Number(product.price),
-    ...(product.imageUrl && { imageUrl: product.imageUrl }),
+    ...(product.imageUrl && { imageUrl: product.imageUrl }), // Deprecated - kept for backward compatibility
     categoryId: product.categoryId,
     category: product.category ? {
       id: product.category.id,
@@ -159,8 +203,12 @@ router.get('/:id', validateProductId, asyncHandler(async (req: Request, res: Res
       updatedAt: product.category.updatedAt.toISOString(),
     } : null,
     quantity: product.quantity,
+    ...(product.color && { color: product.color }),
+    ...(product.size && { size: product.size }),
     status: product.status as 'available' | 'sold_out',
     isActive: product.isActive,
+    images,
+    primaryImage,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
   };
@@ -197,30 +245,53 @@ router.get('/summary/list', asyncHandler(async (_req: Request, res: Response<Api
           createdAt: true,
           updatedAt: true
         }
+      },
+      images: {
+        where: { isActive: true },
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+        select: {
+          id: true,
+          productId: true,
+          imageUrl: true,
+          altText: true,
+          sortOrder: true,
+          isPrimary: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true
+        }
       }
     },
     orderBy: { name: 'asc' },
   });
 
-  const productSummaries: ProductSummary[] = products.map((product: any) => ({
-    id: product.id,
-    name: product.name,
-    price: Number(product.price),
-    imageUrl: product.imageUrl || undefined,
-    categoryId: product.categoryId,
-    category: product.category ? {
-      id: product.category.id,
-      name: product.category.name,
-      description: product.category.description,
-      slug: product.category.slug,
-      isActive: product.category.isActive,
-      sortOrder: product.category.sortOrder,
-      createdAt: product.category.createdAt.toISOString(),
-      updatedAt: product.category.updatedAt.toISOString(),
-    } : null,
-    quantity: product.quantity,
-    status: product.status as 'available' | 'sold_out',
-  }));
+  const productSummaries: ProductSummary[] = products.map((product: any) => {
+    const images = product.images.map(mapProductImageToResponse);
+    const primaryImage = images.find((img: ProductImageResponse) => img.isPrimary) || images[0];
+
+    return {
+      id: product.id,
+      name: product.name,
+      price: Number(product.price),
+      imageUrl: product.imageUrl || undefined, // Deprecated - kept for backward compatibility
+      categoryId: product.categoryId,
+      category: product.category ? {
+        id: product.category.id,
+        name: product.category.name,
+        description: product.category.description,
+        slug: product.category.slug,
+        isActive: product.category.isActive,
+        sortOrder: product.category.sortOrder,
+        createdAt: product.category.createdAt.toISOString(),
+        updatedAt: product.category.updatedAt.toISOString(),
+      } : null,
+      quantity: product.quantity,
+      ...(product.color && { color: product.color }),
+      ...(product.size && { size: product.size }),
+      status: product.status as 'available' | 'sold_out',
+      primaryImage,
+    };
+  });
 
   res.status(HTTP_STATUS.OK).json({
     success: true,

@@ -1,4 +1,5 @@
 import { CategoryResponse } from './category';
+import { ProductImageResponse } from './productImage';
 
 // Product Entity Types
 export interface Product {
@@ -9,6 +10,8 @@ export interface Product {
   imageUrl?: string;
   categoryId?: number;
   quantity: number;
+  color?: string;
+  size?: string;
   status: 'available' | 'sold_out';
   isActive: boolean;
   createdAt: Date;
@@ -23,6 +26,8 @@ export interface CreateProductRequest {
   imageUrl?: string;
   categoryId?: number;
   quantity?: number;
+  color?: string;
+  size?: string;
 }
 
 export interface UpdateProductRequest {
@@ -32,6 +37,8 @@ export interface UpdateProductRequest {
   imageUrl?: string;
   categoryId?: number;
   quantity?: number;
+  color?: string;
+  size?: string;
   isActive?: boolean;
 }
 
@@ -41,12 +48,16 @@ export interface ProductResponse {
   name: string;
   description: string;
   price: number;
-  imageUrl?: string;
+  imageUrl?: string; // Deprecated - kept for backward compatibility
   categoryId: number | null;
   category: CategoryResponse | null;
   quantity: number;
+  color?: string;
+  size?: string;
   status: 'available' | 'sold_out';
   isActive: boolean;
+  images: ProductImageResponse[];
+  primaryImage?: ProductImageResponse | undefined;
   createdAt: string;
   updatedAt: string;
 }
@@ -55,11 +66,14 @@ export interface ProductSummary {
   id: number;
   name: string;
   price: number;
-  imageUrl?: string;
+  imageUrl?: string; // Deprecated - kept for backward compatibility
   categoryId: number | null;
   category: CategoryResponse | null;
   quantity: number;
+  color?: string;
+  size?: string;
   status: 'available' | 'sold_out';
+  primaryImage?: ProductImageResponse | undefined;
 }
 
 // Product Filter Types
@@ -69,4 +83,6 @@ export interface ProductFilters {
   minPrice?: number;
   maxPrice?: number;
   search?: string;
+  color?: string;
+  size?: string;
 }

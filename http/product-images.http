@@ -1,0 +1,279 @@
+### Product Images API Endpoints
+### Base URL: http://localhost:3000/api
+
+### Variables
+@baseUrl = http://localhost:3000/api
+@productId = 1
+@imageId = 1
+@adminToken = Bearer your-admin-token-here
+
+### ==========================================
+### ADMIN ENDPOINTS (Protected)
+### ==========================================
+
+### 1. List Product Images (Admin)
+GET {{baseUrl}}/admin/products/{{productId}}/images
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+### 2. Add Image to Product (Admin)
+POST {{baseUrl}}/admin/products/{{productId}}/images
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "imageUrl": "https://example.com/product-image-1.jpg",
+  "altText": "Product front view",
+  "sortOrder": 0,
+  "isPrimary": true
+}
+
+### 3. Add Another Image to Product (Admin)
+POST {{baseUrl}}/admin/products/{{productId}}/images
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "imageUrl": "https://example.com/product-image-2.jpg",
+  "altText": "Product side view",
+  "sortOrder": 1,
+  "isPrimary": false
+}
+
+### 4. Add Third Image to Product (Admin)
+POST {{baseUrl}}/admin/products/{{productId}}/images
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "imageUrl": "https://example.com/product-image-3.jpg",
+  "altText": "Product back view",
+  "sortOrder": 2,
+  "isPrimary": false
+}
+
+### 5. Update Image (Admin)
+PUT {{baseUrl}}/admin/products/{{productId}}/images/{{imageId}}
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "altText": "Updated product view description",
+  "sortOrder": 3,
+  "isPrimary": true
+}
+
+### 6. Reorder Images (Admin)
+PUT {{baseUrl}}/admin/products/{{productId}}/images/reorder
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "imageIds": [2, 1, 3]
+}
+
+### 7. Delete Image (Admin) - Soft Delete
+DELETE {{baseUrl}}/admin/products/{{productId}}/images/{{imageId}}
+Authorization: {{adminToken}}
+
+### ==========================================
+### PUBLIC ENDPOINTS
+### ==========================================
+
+### 8. Get Product Images (Public)
+GET {{baseUrl}}/products/{{productId}}/images
+
+### 9. Get Product Images for Different Product (Public)
+GET {{baseUrl}}/products/2/images
+
+### ==========================================
+### ERROR TESTING
+### ==========================================
+
+### 10. Try to Add Image to Non-existent Product
+POST {{baseUrl}}/admin/products/999/images
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "imageUrl": "https://example.com/image.jpg",
+  "altText": "Test image",
+  "sortOrder": 0,
+  "isPrimary": false
+}
+
+### 11. Try to Update Non-existent Image
+PUT {{baseUrl}}/admin/products/{{productId}}/images/999
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "altText": "Updated description"
+}
+
+### 12. Try to Access Admin Endpoint Without Auth
+GET {{baseUrl}}/admin/products/{{productId}}/images
+
+### 13. Try to Add Image with Invalid URL
+POST {{baseUrl}}/admin/products/{{productId}}/images
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "imageUrl": "invalid-url",
+  "altText": "Invalid image",
+  "sortOrder": 0,
+  "isPrimary": false
+}
+
+### 14. Try to Add Image with Missing Required Fields
+POST {{baseUrl}}/admin/products/{{productId}}/images
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "altText": "Missing imageUrl"
+}
+
+### 15. Try to Reorder with Invalid Image IDs
+PUT {{baseUrl}}/admin/products/{{productId}}/images/reorder
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "imageIds": [999, 998, 997]
+}
+
+### ==========================================
+### BULK OPERATIONS
+### ==========================================
+
+### 16. Add Multiple Images to Product (Sequential)
+### First Image
+POST {{baseUrl}}/admin/products/{{productId}}/images
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "imageUrl": "https://picsum.photos/400/400?random=1",
+  "altText": "Product gallery image 1",
+  "sortOrder": 0,
+  "isPrimary": true
+}
+
+### Second Image
+POST {{baseUrl}}/admin/products/{{productId}}/images
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "imageUrl": "https://picsum.photos/400/400?random=2",
+  "altText": "Product gallery image 2",
+  "sortOrder": 1,
+  "isPrimary": false
+}
+
+### Third Image
+POST {{baseUrl}}/admin/products/{{productId}}/images
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "imageUrl": "https://picsum.photos/400/400?random=3",
+  "altText": "Product gallery image 3",
+  "sortOrder": 2,
+  "isPrimary": false
+}
+
+### ==========================================
+### VALIDATION TESTING
+### ==========================================
+
+### 17. Test Alt Text Length Limit (255 chars)
+POST {{baseUrl}}/admin/products/{{productId}}/images
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "imageUrl": "https://example.com/image.jpg",
+  "altText": "This is a very long alt text that exceeds the maximum allowed length of 255 characters. This should trigger a validation error because it's way too long and contains way too many characters to be considered a valid alt text for an image. The system should reject this input and return an appropriate error message indicating that the alt text is too long.",
+  "sortOrder": 0,
+  "isPrimary": false
+}
+
+### 18. Test Image URL Length Limit (500 chars)
+POST {{baseUrl}}/admin/products/{{productId}}/images
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "imageUrl": "https://example.com/very/long/path/to/image/that/exceeds/maximum/length/limit/of/five/hundred/characters/this/is/a/very/long/url/that/should/trigger/validation/error/because/it/exceeds/the/maximum/allowed/length/for/image/urls/in/the/system/this/url/is/definitely/too/long/and/should/be/rejected/by/the/validation/middleware/with/appropriate/error/message/indicating/that/the/url/is/too/long.jpg",
+  "altText": "Long URL test",
+  "sortOrder": 0,
+  "isPrimary": false
+}
+
+### 19. Test Negative Sort Order
+POST {{baseUrl}}/admin/products/{{productId}}/images
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "imageUrl": "https://example.com/image.jpg",
+  "altText": "Negative sort order test",
+  "sortOrder": -1,
+  "isPrimary": false
+}
+
+### 20. Test Non-integer Sort Order
+POST {{baseUrl}}/admin/products/{{productId}}/images
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "imageUrl": "https://example.com/image.jpg",
+  "altText": "Non-integer sort order test",
+  "sortOrder": "not-a-number",
+  "isPrimary": false
+}
+
+### ==========================================
+### INTEGRATION TESTING
+### ==========================================
+
+### 21. Test Primary Image Switching
+### Set first image as primary
+PUT {{baseUrl}}/admin/products/{{productId}}/images/1
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "isPrimary": true
+}
+
+### Set second image as primary (should unset first)
+PUT {{baseUrl}}/admin/products/{{productId}}/images/2
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "isPrimary": true
+}
+
+### 22. Test Image Deactivation
+PUT {{baseUrl}}/admin/products/{{productId}}/images/{{imageId}}
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+
+### 23. Test Image Reactivation
+PUT {{baseUrl}}/admin/products/{{productId}}/images/{{imageId}}
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": true
+}

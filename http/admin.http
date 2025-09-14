@@ -70,7 +70,11 @@ Content-Type: application/json
 GET http://localhost:3000/api/admin/dashboard
 Authorization: Bearer {{token}}
 
-### Get All Products (Admin View)
+### ==========================================
+### ADMIN PRODUCT MANAGEMENT
+### ==========================================
+
+### Get All Products (Admin View - now includes images and primaryImage)
 GET http://localhost:3000/api/admin/products
 Authorization: Bearer {{token}}
 
@@ -82,19 +86,47 @@ Authorization: Bearer {{token}}
 GET http://localhost:3000/api/admin/products?search=Sample
 Authorization: Bearer {{token}}
 
-### Create New Product
+### Get Products by Status
+GET http://localhost:3000/api/admin/products?status=available
+Authorization: Bearer {{token}}
+
+### Get Products by Active Status
+GET http://localhost:3000/api/admin/products?isActive=true
+Authorization: Bearer {{token}}
+
+### Get Product by ID (Admin View - includes inactive/sold out)
+GET http://localhost:3000/api/admin/products/1
+Authorization: Bearer {{token}}
+
+### Create New Product (now includes categoryId and quantity)
 POST http://localhost:3000/api/admin/products
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "name": "New Test Product",
-  "description": "This is a test product created via API",
+  "name": "New Test Product with Multiple Images",
+  "description": "This is a test product created via API with support for multiple images",
   "price": 39.99,
-  "imageUrl": "https://via.placeholder.com/300x300?text=New+Product"
+  "imageUrl": "https://via.placeholder.com/300x300?text=New+Product",
+  "categoryId": 1,
+  "quantity": 10
 }
 
-### Update Product
+### Create Product with Zero Quantity (should be marked as sold_out)
+POST http://localhost:3000/api/admin/products
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Out of Stock Product",
+  "description": "This product has zero quantity and should be marked as sold_out",
+  "price": 25.99,
+  "imageUrl": "https://via.placeholder.com/300x300?text=Out+of+Stock",
+  "categoryId": 2,
+  "quantity": 0
+}
+
+### Update Product (now includes categoryId and quantity)
 PUT http://localhost:3000/api/admin/products/1
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -103,7 +135,36 @@ Content-Type: application/json
   "name": "Updated Product Name",
   "description": "Updated product description",
   "price": 49.99,
-  "imageUrl": "https://via.placeholder.com/300x300?text=Updated+Product"
+  "imageUrl": "https://via.placeholder.com/300x300?text=Updated+Product",
+  "categoryId": 1,
+  "quantity": 15
+}
+
+### Update Product Quantity to Zero (should update status to sold_out)
+PUT http://localhost:3000/api/admin/products/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "quantity": 0
+}
+
+### Update Product Quantity (should update status to available)
+PUT http://localhost:3000/api/admin/products/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "quantity": 5
+}
+
+### Toggle Product Active Status
+PUT http://localhost:3000/api/admin/products/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "isActive": false
 }
 
 ### Delete Product (Soft Delete)
