@@ -613,8 +613,8 @@ router.get('/products', validatePagination, asyncHandler(async (req: Request, re
         updatedAt: product.category.updatedAt.toISOString(),
       } : null,
       quantity: product.quantity,
-      ...(product.color && { color: product.color }),
-      ...(product.size && { size: product.size }),
+      colors: product.colors ? JSON.parse(product.colors) : [],
+      sizes: product.sizes ? JSON.parse(product.sizes) : [],
       status: product.status as 'available' | 'sold_out',
       isActive: product.isActive,
       images,
@@ -697,8 +697,8 @@ router.get('/products/:id', validateProductId, asyncHandler(async (req: Request,
       updatedAt: product.category.updatedAt.toISOString(),
     } : null,
     quantity: product.quantity,
-    ...(product.color && { color: product.color }),
-    ...(product.size && { size: product.size }),
+    colors: product.colors ? JSON.parse(product.colors) : [],
+    sizes: product.sizes ? JSON.parse(product.sizes) : [],
     status: product.status as 'available' | 'sold_out',
     isActive: product.isActive,
     images,
@@ -717,7 +717,7 @@ router.get('/products/:id', validateProductId, asyncHandler(async (req: Request,
 
 // POST /api/admin/products - Create new product
 router.post('/products', validateCreateProduct, asyncHandler(async (req: Request, res: Response<ApiResponse<ProductResponse>>) => {
-  const { name, description, price, imageUrl, categoryId, quantity = 0, color, size } = req.body as CreateProductRequest;
+  const { name, description, price, imageUrl, categoryId, quantity = 0, colors = [], sizes = [] } = req.body as CreateProductRequest;
   const quantityNum = parseInt(quantity.toString());
 
   // Validate required fields
@@ -739,8 +739,8 @@ router.post('/products', validateCreateProduct, asyncHandler(async (req: Request
         imageUrl: imageUrl || null,
         categoryId: categoryId || null,
         quantity: quantityNum,
-        color: color || null,
-        size: size || null,
+        colors: JSON.stringify(colors || []),
+        sizes: JSON.stringify(sizes || []),
         status: quantityNum > 0 ? 'available' : 'sold_out',
       },
       include: {
@@ -784,8 +784,8 @@ router.post('/products', validateCreateProduct, asyncHandler(async (req: Request
       updatedAt: product.category.updatedAt.toISOString(),
     } : null,
     quantity: product.quantity,
-    ...(product.color && { color: product.color }),
-    ...(product.size && { size: product.size }),
+    colors: product.colors ? JSON.parse(product.colors) : [],
+    sizes: product.sizes ? JSON.parse(product.sizes) : [],
     status: product.status as 'available' | 'sold_out',
     isActive: product.isActive,
     images,
@@ -805,7 +805,7 @@ router.post('/products', validateCreateProduct, asyncHandler(async (req: Request
 // PUT /api/admin/products/:id - Update product
 router.put('/products/:id', validateProductId, validateUpdateProduct, asyncHandler(async (req: Request, res: Response<ApiResponse<ProductResponse>>) => {
   const productId = parseInt(req.params['id']!);
-  const { name, description, price, imageUrl, categoryId, quantity, color, size, isActive } = req.body as UpdateProductRequest;
+  const { name, description, price, imageUrl, categoryId, quantity, colors, sizes, isActive } = req.body as UpdateProductRequest;
 
   // Check if product exists
   const existingProduct = await prisma.product.findUnique({
@@ -828,8 +828,8 @@ router.put('/products/:id', validateProductId, validateUpdateProduct, asyncHandl
   if (price !== undefined) updateData.price = price;
   if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
   if (categoryId !== undefined) updateData.categoryId = categoryId;
-  if (color !== undefined) updateData.color = color;
-  if (size !== undefined) updateData.size = size;
+  if (colors !== undefined) updateData.colors = JSON.stringify(colors);
+  if (sizes !== undefined) updateData.sizes = JSON.stringify(sizes);
   if (quantity !== undefined) {
     updateData.quantity = parseInt(quantity.toString());
     // Update status based on quantity
@@ -882,8 +882,8 @@ router.put('/products/:id', validateProductId, validateUpdateProduct, asyncHandl
       updatedAt: updatedProduct.category.updatedAt.toISOString(),
     } : null,
     quantity: updatedProduct.quantity,
-    ...(updatedProduct.color && { color: updatedProduct.color }),
-    ...(updatedProduct.size && { size: updatedProduct.size }),
+    colors: updatedProduct.colors ? JSON.parse(updatedProduct.colors) : [],
+    sizes: updatedProduct.sizes ? JSON.parse(updatedProduct.sizes) : [],
     status: updatedProduct.status as 'available' | 'sold_out',
     isActive: updatedProduct.isActive,
     images,

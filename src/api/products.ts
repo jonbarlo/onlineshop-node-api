@@ -34,8 +34,10 @@ router.get('/', validatePagination, asyncHandler(async (req: Request, res: Respo
   const minPrice = req.query['minPrice'] ? parseFloat(req.query['minPrice'] as string) : undefined;
   const maxPrice = req.query['maxPrice'] ? parseFloat(req.query['maxPrice'] as string) : undefined;
   const search = req.query['search'] as string | undefined;
-  const color = req.query['color'] as string | undefined;
-  const size = req.query['size'] as string | undefined;
+  const colors = req.query['colors'] as string | undefined;
+  const sizes = req.query['sizes'] as string | undefined;
+  const colorArray = colors ? colors.split(',').map(c => c.trim()) : undefined;
+  const sizeArray = sizes ? sizes.split(',').map(s => s.trim()) : undefined;
 
   // Build where clause
   const where: any = { 
@@ -67,12 +69,22 @@ router.get('/', validatePagination, asyncHandler(async (req: Request, res: Respo
     ];
   }
 
-  if (color) {
-    where.color = { contains: color, mode: 'insensitive' };
+  if (colorArray && colorArray.length > 0) {
+    where.OR = where.OR || [];
+    colorArray.forEach(color => {
+      where.OR.push({
+        colors: { contains: `"${color}"` }
+      });
+    });
   }
 
-  if (size) {
-    where.size = { contains: size, mode: 'insensitive' };
+  if (sizeArray && sizeArray.length > 0) {
+    where.OR = where.OR || [];
+    sizeArray.forEach(size => {
+      where.OR.push({
+        sizes: { contains: `"${size}"` }
+      });
+    });
   }
 
   // Get products with pagination, category information, and images
@@ -123,8 +135,8 @@ router.get('/', validatePagination, asyncHandler(async (req: Request, res: Respo
         updatedAt: product.category.updatedAt.toISOString(),
       } : null,
       quantity: product.quantity,
-      ...(product.color && { color: product.color }),
-      ...(product.size && { size: product.size }),
+      colors: product.colors ? JSON.parse(product.colors) : [],
+      sizes: product.sizes ? JSON.parse(product.sizes) : [],
       status: product.status as 'available' | 'sold_out',
       isActive: product.isActive,
       images,
@@ -203,8 +215,8 @@ router.get('/:id', validateProductId, asyncHandler(async (req: Request, res: Res
       updatedAt: product.category.updatedAt.toISOString(),
     } : null,
     quantity: product.quantity,
-    ...(product.color && { color: product.color }),
-    ...(product.size && { size: product.size }),
+    colors: product.colors ? JSON.parse(product.colors) : [],
+    sizes: product.sizes ? JSON.parse(product.sizes) : [],
     status: product.status as 'available' | 'sold_out',
     isActive: product.isActive,
     images,
@@ -286,8 +298,8 @@ router.get('/summary/list', asyncHandler(async (_req: Request, res: Response<Api
         updatedAt: product.category.updatedAt.toISOString(),
       } : null,
       quantity: product.quantity,
-      ...(product.color && { color: product.color }),
-      ...(product.size && { size: product.size }),
+      colors: product.colors ? JSON.parse(product.colors) : [],
+      sizes: product.sizes ? JSON.parse(product.sizes) : [],
       status: product.status as 'available' | 'sold_out',
       primaryImage,
     };

@@ -10,8 +10,8 @@ export interface Product {
   imageUrl?: string;
   categoryId?: number;
   quantity: number;
-  color?: string;
-  size?: string;
+  colors: string[];
+  sizes: string[];
   status: 'available' | 'sold_out';
   isActive: boolean;
   createdAt: Date;
@@ -26,8 +26,8 @@ export interface CreateProductRequest {
   imageUrl?: string;
   categoryId?: number;
   quantity?: number;
-  color?: string;
-  size?: string;
+  colors?: string[];
+  sizes?: string[];
 }
 
 export interface UpdateProductRequest {
@@ -37,8 +37,8 @@ export interface UpdateProductRequest {
   imageUrl?: string;
   categoryId?: number;
   quantity?: number;
-  color?: string;
-  size?: string;
+  colors?: string[];
+  sizes?: string[];
   isActive?: boolean;
 }
 
@@ -52,8 +52,8 @@ export interface ProductResponse {
   categoryId: number | null;
   category: CategoryResponse | null;
   quantity: number;
-  color?: string;
-  size?: string;
+  colors: string[];
+  sizes: string[];
   status: 'available' | 'sold_out';
   isActive: boolean;
   images: ProductImageResponse[];
@@ -70,8 +70,8 @@ export interface ProductSummary {
   categoryId: number | null;
   category: CategoryResponse | null;
   quantity: number;
-  color?: string;
-  size?: string;
+  colors: string[];
+  sizes: string[];
   status: 'available' | 'sold_out';
   primaryImage?: ProductImageResponse | undefined;
 }
@@ -83,6 +83,6 @@ export interface ProductFilters {
   minPrice?: number;
   maxPrice?: number;
   search?: string;
-  color?: string;
-  size?: string;
+  colors?: string[];
+  sizes?: string[];
 }

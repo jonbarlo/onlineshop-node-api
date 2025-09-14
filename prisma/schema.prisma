@@ -46,8 +46,8 @@ model Product {
   imageUrl    String?     @map("image_url") @db.VarChar(255) // Deprecated - kept for backward compatibility
   categoryId  Int?        @map("category_id")
   quantity    Int         @default(0)
-  color       String?     @db.VarChar(50)
-  size        String?     @db.VarChar(20)
+  colors      String      @default("[]") @db.Text
+  sizes       String      @default("[]") @db.Text
   status      String      @default("available") @db.VarChar(20) // available, sold_out
   isActive    Boolean     @default(true) @map("is_active")
   createdAt   DateTime    @default(now()) @map("created_at")
@@ -60,8 +60,6 @@ model Product {
   @@index([isActive])
   @@index([categoryId])
   @@index([status])
-  @@index([color])
-  @@index([size])
   @@map("products")
 }
 

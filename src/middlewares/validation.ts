@@ -82,16 +82,24 @@ export const validateCreateProduct = [
     .optional()
     .isInt({ min: 0 })
     .withMessage('Quantity must be a non-negative integer'),
-  body('color')
+  body('colors')
+    .optional()
+    .isArray()
+    .withMessage('Colors must be an array'),
+  body('colors.*')
     .optional()
     .trim()
     .isLength({ max: 50 })
-    .withMessage('Color must not exceed 50 characters'),
-  body('size')
+    .withMessage('Each color must not exceed 50 characters'),
+  body('sizes')
+    .optional()
+    .isArray()
+    .withMessage('Sizes must be an array'),
+  body('sizes.*')
     .optional()
     .trim()
     .isLength({ max: 20 })
-    .withMessage('Size must not exceed 20 characters'),
+    .withMessage('Each size must not exceed 20 characters'),
   body('isActive')
     .optional()
     .isBoolean()
@@ -126,16 +134,24 @@ export const validateUpdateProduct = [
     .optional()
     .isInt({ min: 0 })
     .withMessage('Quantity must be a non-negative integer'),
-  body('color')
+  body('colors')
+    .optional()
+    .isArray()
+    .withMessage('Colors must be an array'),
+  body('colors.*')
     .optional()
     .trim()
     .isLength({ max: 50 })
-    .withMessage('Color must not exceed 50 characters'),
-  body('size')
+    .withMessage('Each color must not exceed 50 characters'),
+  body('sizes')
+    .optional()
+    .isArray()
+    .withMessage('Sizes must be an array'),
+  body('sizes.*')
     .optional()
     .trim()
     .isLength({ max: 20 })
-    .withMessage('Size must not exceed 20 characters'),
+    .withMessage('Each size must not exceed 20 characters'),
   body('isActive')
     .optional()
     .isBoolean()
