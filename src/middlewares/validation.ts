@@ -11,6 +11,11 @@ export const handleValidationErrors = (
   const errors = validationResult(req);
   
   if (!errors.isEmpty()) {
+    // Log validation errors for debugging (following Node.js conventions)
+    console.error('Validation failed for:', req.method, req.path);
+    console.error('Request body:', JSON.stringify(req.body, null, 2));
+    console.error('Validation errors:', JSON.stringify(errors.array(), null, 2));
+
     const validationErrors: ValidationError[] = errors.array().map(error => ({
       field: error.type === 'field' ? (error as any).path : 'unknown',
       message: error.msg,
@@ -65,15 +70,15 @@ export const validateCreateProduct = [
     .trim()
     .notEmpty()
     .withMessage('Product description is required')
-    .isLength({ min: 10, max: 1000 })
-    .withMessage('Product description must be between 10 and 1000 characters'),
+    .isLength({ min: 1, max: 2000 })
+    .withMessage('Product description must be between 1 and 2000 characters'),
   body('price')
     .isFloat({ min: 0 })
     .withMessage('Price must be a positive number'),
   body('imageUrl')
     .optional()
-    .isURL()
-    .withMessage('Image URL must be a valid URL'),
+    .isString()
+    .withMessage('Image URL must be a string'),
   body('categoryId')
     .optional()
     .isInt({ min: 1 })
@@ -103,26 +108,28 @@ export const validateCreateProduct = [
   body('variants')
     .optional()
     .isArray()
-    .withMessage('Variants must be an array of objects'),
+    .withMessage('Variants must be an array'),
   body('variants.*.color')
     .optional()
-    .trim()
-    .isLength({ min: 1, max: 50 })
-    .withMessage('Variant color must be between 1 and 50 characters'),
+    .custom((value) => {
+      if (value === undefined || value === null) return true;
+      if (typeof value === 'string' && value.length <= 50) return true;
+      throw new Error('Variant color must be a string not exceeding 50 characters');
+    }),
   body('variants.*.size')
     .optional()
-    .trim()
-    .isLength({ min: 1, max: 20 })
-    .withMessage('Variant size must be between 1 and 20 characters'),
+    .custom((value) => {
+      if (value === undefined || value === null) return true;
+      if (typeof value === 'string' && value.length <= 20) return true;
+      throw new Error('Variant size must be a string not exceeding 20 characters');
+    }),
   body('variants.*.quantity')
     .optional()
-    .isInt({ min: 0 })
-    .withMessage('Variant quantity must be a non-negative integer'),
-  body('variants.*.sku')
-    .optional()
-    .trim()
-    .isLength({ max: 100 })
-    .withMessage('Variant SKU must not exceed 100 characters'),
+    .custom((value) => {
+      if (value === undefined || value === null) return true;
+      if (typeof value === 'number' && Number.isInteger(value) && value >= 0) return true;
+      throw new Error('Variant quantity must be a non-negative integer');
+    }),
   body('isActive')
     .optional()
     .isBoolean()
@@ -139,16 +146,16 @@ export const validateUpdateProduct = [
   body('description')
     .optional()
     .trim()
-    .isLength({ min: 10, max: 1000 })
-    .withMessage('Product description must be between 10 and 1000 characters'),
+    .isLength({ min: 1, max: 2000 })
+    .withMessage('Product description must be between 1 and 2000 characters'),
   body('price')
     .optional()
     .isFloat({ min: 0 })
     .withMessage('Price must be a positive number'),
   body('imageUrl')
     .optional()
-    .isURL()
-    .withMessage('Image URL must be a valid URL'),
+    .isString()
+    .withMessage('Image URL must be a string'),
   body('categoryId')
     .optional()
     .isInt({ min: 1 })
@@ -178,26 +185,28 @@ export const validateUpdateProduct = [
   body('variants')
     .optional()
     .isArray()
-    .withMessage('Variants must be an array of objects'),
+    .withMessage('Variants must be an array'),
   body('variants.*.color')
     .optional()
-    .trim()
-    .isLength({ min: 1, max: 50 })
-    .withMessage('Variant color must be between 1 and 50 characters'),
+    .custom((value) => {
+      if (value === undefined || value === null) return true;
+      if (typeof value === 'string' && value.length <= 50) return true;
+      throw new Error('Variant color must be a string not exceeding 50 characters');
+    }),
   body('variants.*.size')
     .optional()
-    .trim()
-    .isLength({ min: 1, max: 20 })
-    .withMessage('Variant size must be between 1 and 20 characters'),
+    .custom((value) => {
+      if (value === undefined || value === null) return true;
+      if (typeof value === 'string' && value.length <= 20) return true;
+      throw new Error('Variant size must be a string not exceeding 20 characters');
+    }),
   body('variants.*.quantity')
     .optional()
-    .isInt({ min: 0 })
-    .withMessage('Variant quantity must be a non-negative integer'),
-  body('variants.*.sku')
-    .optional()
-    .trim()
-    .isLength({ max: 100 })
-    .withMessage('Variant SKU must not exceed 100 characters'),
+    .custom((value) => {
+      if (value === undefined || value === null) return true;
+      if (typeof value === 'number' && Number.isInteger(value) && value >= 0) return true;
+      throw new Error('Variant quantity must be a non-negative integer');
+    }),
   body('isActive')
     .optional()
     .isBoolean()

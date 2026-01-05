@@ -840,10 +840,11 @@ router.post('/products', validateCreateProduct, asyncHandler(async (req: Request
       },
     });
 
-    // Create variants if provided
+    // Create variants if provided - SIMPLIFIED
     if (requestVariants && requestVariants.length > 0) {
       for (const variant of requestVariants) {
-        const sku = variant.sku || `${name.toUpperCase().replace(/\s+/g, '-')}-${variant.color.toUpperCase()}-${variant.size.toUpperCase()}`;
+        // Simple auto-generated SKU - no validation
+        const simpleSku = `${name.replace(/[^A-Z0-9]/gi, '')}-${variant.color.replace(/[^A-Z0-9]/gi, '')}-${variant.size}-${Date.now()}`;
         
         await tx.productVariant.create({
           data: {
@@ -851,7 +852,7 @@ router.post('/products', validateCreateProduct, asyncHandler(async (req: Request
             color: variant.color,
             size: variant.size,
             quantity: variant.quantity,
-            sku: sku,
+            sku: simpleSku,
             isActive: true,
           },
         });
@@ -972,14 +973,16 @@ router.put('/products/:id', validateProductId, validateUpdateProduct, asyncHandl
 
     // Handle variants if provided
     if (requestVariants !== undefined) {
-      // Delete existing variants
-      await tx.productVariant.deleteMany({
-        where: { productId: productId }
+      // Mark all existing variants as inactive first
+      await tx.productVariant.updateMany({
+        where: { productId: productId },
+        data: { isActive: false }
       });
 
-      // Create new variants (even if empty array - this clears all variants)
+      // Create new variants - SIMPLIFIED
       for (const variant of requestVariants) {
-        const sku = variant.sku || `${product.name.toUpperCase().replace(/\s+/g, '-')}-${variant.color.toUpperCase()}-${variant.size.toUpperCase()}`;
+        // Simple auto-generated SKU - no validation, no uniqueness checks
+        const simpleSku = `${product.name.replace(/[^A-Z0-9]/gi, '')}-${variant.color.replace(/[^A-Z0-9]/gi, '')}-${variant.size}-${Date.now()}`;
         
         await tx.productVariant.create({
           data: {
@@ -987,7 +990,7 @@ router.put('/products/:id', validateProductId, validateUpdateProduct, asyncHandl
             color: variant.color,
             size: variant.size,
             quantity: variant.quantity,
-            sku: sku,
+            sku: simpleSku,
             isActive: true,
           },
         });
